@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.colors import Normalize, LogNorm
+from matplotlib.colors import Normalize
 from matplotlib.patches import Ellipse, Arc
 
 def arg_list(arg: Any, n: int=1) -> List[Any]:
@@ -690,7 +690,7 @@ def plot_ellipses(
     """
     if height is None:
         height = width
-    
+
     # find the number of ellipse need to plot
     n = len(xy_pos)
     if n == 1:
@@ -700,9 +700,13 @@ def plot_ellipses(
         width_list  = arg_list(width,  n)
         height_list = arg_list(height, n)
         angle_list  = arg_list(angle,  n)
+        for key, value in kwargs.items():
+            kwargs[key] = arg_list(value, n)  # Ensure any list in kwargs is the correct length
 
-        for xy,w,h,a in zip(xy_pos, width_list, height_list, angle_list):
-            e = Ellipse(xy, w, h, angle=a,**kwargs)
+        for i, (xy,w,h,a) in enumerate(zip(xy_pos, width_list, height_list, angle_list)):
+            # Extract other properties from kwargs
+            ellipse_kwargs = {key: value[i] for key, value in kwargs.items()}
+            e = Ellipse(xy, w, h, angle=a,**ellipse_kwargs)
             ax.add_patch(e)
 
 def plot_arcs(
@@ -741,7 +745,10 @@ def plot_arcs(
         angle_list  = arg_list(angle,  n)
         theta1_list = arg_list(theta1, n)
         theta2_list = arg_list(theta2, n)
-
-        for xy,w,h,a,t1,t2 in zip(xy_pos, width_list, height_list, angle_list, theta1_list, theta2_list):
-            a = Arc(xy, w, h, angle=a, theta1=t1, theta2=t2, **kwargs)
+        for key, value in kwargs.items():
+            kwargs[key] = arg_list(value, n)  # Ensure any list in kwargs is the correct length
+        
+        for i, (xy,w,h,a,t1,t2) in enumerate(zip(xy_pos, width_list, height_list, angle_list, theta1_list, theta2_list)):
+            arg_kwargs = {key: value[i] for key, value in kwargs.items()}
+            a = Arc(xy, w, h, angle=a, theta1=t1, theta2=t2, **arg_kwargs)
             ax.add_patch(a)
