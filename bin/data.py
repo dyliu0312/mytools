@@ -4,105 +4,153 @@ tools for data process.
 """
 
 import os
-from typing import Generator, List, Tuple, Union
+from typing import List, Union, Callable
 
 import h5py as h5
 import numpy as np
 
+
 # --- os ---
-def get_file_dir(path:str)->str:
+def get_file_dir(path: str) -> str:
     """
     get the file parrent dir
     """
     return os.path.dirname(path)
 
-def get_filename(path:str)->str:
+
+def get_filename(path: str) -> str:
     """
     get the file name
     """
     file_name = os.path.splitext(os.path.basename(path))[0]
     return file_name
 
-def delete_files(file_paths:List[str])->None:
+
+def delete_files(file_paths: List[str]) -> None:
     """
-    delete files
+    Deletes files from the given list of file paths.
+    
+    Args:
+        file_paths (List[str]): A list of file paths to be deleted.
+        
+    Prints:
+        Messages indicating whether each file was deleted, not found, or caused an error.
     """
     for file_path in file_paths:
         try:
             os.remove(file_path)
-            print(f"deleted: {file_path}")
+            print(f"Deleted: {file_path}")
         except FileNotFoundError:
-            print(f"file not found: {file_path}")
+            print(f"File not found: {file_path}")
         except PermissionError:
-            print(f"permission error: {file_path}")
-        else:
-            print(f" delete {file_path} error: {Exception}")
-            
-def is_exist(file_path:str)-> bool:
+            print(f"Permission error: {file_path}")
+        except Exception as e:
+            print(f"Error deleting {file_path}: {e}")
+
+
+def is_exist(file_path: str) -> bool:
     """
     check file exists.
     """
     return os.path.exists(file_path)
 
-# --- hdf5 file ---
-def visititems_h5(file_path:str):
-    """
-    print the group and dataset info in h5 file using the visititems() method.
-    """
-    with h5.File(file_path, 'r') as f:
-        f.visititems(print)
 
-def del_data(file_path:str, key:str):
+# --- hdf5 file ---
+def visititems_h5(file_path: str, func: Callable = print):
     """
-    delete data from h5 file.
+    Recursively visit the group and dataset information in an HDF5 file using the visititems() method.
+
+    Args:
+        file_path (str): Path to the HDF5 file.
+        func (callable): Function to be applied to each item (group or dataset) in the HDF5 file.
+                        Defaults to `print` which will print the name and item type.
     """
-    with h5.File(file_path, 'r+') as f:
+    try:
+        # Open the HDF5 file in read-only mode
+        with h5.File(file_path, "r") as f:
+            # Visit all items in the file (groups and datasets) and apply `func` to each
+            f.visititems(func)
+    except Exception as e:
+        print(f"Error accessing HDF5 file: {e}")
+
+
+def del_data(file_path: str, key: str):
+    """
+    delete dataset and it's attributes from h5 file.
+    """
+    with h5.File(file_path, "r+") as f:
+        # del attributes
+        for k in f[key].attrs.keys():
+            del f[key].attrs[k]
+        # del data
         del f[key]
 
-def read_h5(file_path:str, key:Union[str, List[str]])-> Union[np.ndarray, List[np.ndarray]]:
+
+def print_dataset_attrs(dataset):
+    """
+    Prints the attributes of a given dataset if any exist.
+    """
+    attrs = dataset.attrs
+    if attrs:
+        print(f"Attributes for '{dataset.name}':")
+        for attr_name, attr_value in attrs.items():
+            print(f"  {attr_name}: {attr_value}")
+
+
+def read_h5(
+    file_path: str, key: Union[str, List[str]], print_attrs: bool = False
+) -> Union[np.ndarray, List[np.ndarray]]:
     """
     Read dataset from an HDF5 file.
 
     Args:
-        filepath (str): Path to the HDF5 file.
-        key (str or list): Key(s) to read from the HDF5 file.\
+        file_path (str): Path to the HDF5 file.
+        key (str or list): Key(s) to read from the HDF5 file.
             It can be a single key (str) or a list of keys.
+        print_attrs (bool): If True, prints the attributes of the datasets
+            when reading them.
 
     Returns:
-        out (np.ndarray or list): If a single key is provided, \
-            the corresponding data is returned as a single numpy array.\
-            If multiple keys are provided, a list of numpy arrays is returned.
-    """    
+        out (ndarray or list): The dataset(s) read from the HDF5 file.
+    """
+    # Ensure the key is either a string or a list of strings
     if not isinstance(key, (str, list)):
         raise TypeError("Key must be a string or a list of strings.")
-    
-    with h5.File(file_path, 'r') as f:
-        avilable_keys = list(f.keys())
-        
+
+    # Open the HDF5 file in read-only mode
+    with h5.File(file_path, "r") as f:
+        available_keys = list(f.keys())
+
+        # Helper function to handle reading and printing attributes for each key
+        def get_data_for_key(k):
+            if k not in f:
+                raise ValueError(
+                    f"Key '{k}' not found. Available keys are: {available_keys}"
+                )
+            dataset = f[k][:]  # type: ignore
+            if print_attrs:
+                print_dataset_attrs(f[k])
+            return dataset
+
+        # If a single key is provided, return the corresponding data
         if isinstance(key, str):
-            if key not in f:
-                raise ValueError(f"Key '{key}' not found. Available keys are: '{avilable_keys}'")
-            else:
-                return f[key][:] # type: ignore
-            
+            return get_data_for_key(key)  # type: ignore
+
+        # If a list of keys is provided, return a list of corresponding data
         elif isinstance(key, list):
-            data = []
-            for k in key:
-                if k not in f:
-                    raise ValueError(f"Key '{k}' not found. Available keys are: '{avilable_keys}'")
-                data.append(f[k][:]) # type: ignore
-            
-            return data
-    
-    return None
-        
-def save_h5(output:str, keys:List[str], data:list, group_name:Union[str, None]=None):
+            data_list = [get_data_for_key(k) for k in key]
+            return data_list  # type: ignore
+
+
+def save_h5(
+    output: str, keys: List[str], data: list, group_name: Union[str, None] = None
+):
     """
     Save data to an HDF5 file and create group if group_name is provided.
-    
+
     **For single dataset, keys and datas should be provided list with one element.
     e.g. keys = ['data',], data = [data,]**
-    
+
     Args:
         output (str): The path to the output HDF5 file.
         keys (list): A list of keys for the datasets.
@@ -110,50 +158,74 @@ def save_h5(output:str, keys:List[str], data:list, group_name:Union[str, None]=N
         group_name (str, optional): A group paths to be created. Defaults to None.
 
     """
-    with h5.File(output, 'a') as f:
+    with h5.File(output, "a") as f:
         if group_name is not None:
             f.create_group(group_name)
-        
+
         for k, d in zip(keys, data):
             if group_name is not None:
                 dataset_path = f"{group_name}/{k}"
             else:
                 dataset_path = k
             f.create_dataset(dataset_path, data=d)
-            
+
+
+def save_h5_attributes(filepath, file_attributes=None, dataset_attrs=None):
+    """
+    Save specified attributes in an HDF5 file, with an option to add dataset-level attributes.
+
+    Parameters:
+    filepath (str): Path to the HDF5 file. It will create the file if it doesn't exist.
+    attributes (dict, optional): A dictionary containing file-level key-value pairs to store as attributes.
+    dataset_attrs (dict, optional): A dictionary containing keys as dataset names and values as dictionaries of dataset-level attributes.
+                                     For example: {'dataset1': {'units': 'm', 'description': 'Height data'}}.
+    """
+
+    if file_attributes is None and dataset_attrs is None:
+        raise ValueError("Please provided a kind of attributes at least.")
+
+    with h5.File(filepath, "a") as f:
+        if file_attributes is not None:
+            # Store file-level attributes in the root of the HDF5 file
+            for key, value in file_attributes.items():  # type: ignore
+                try:
+                    f.attrs[key] = value
+                except Exception as e:
+                    print(f"Error storing attributes: {e}")
+            print(f"Successfully stored file-level attributes in {filepath}")
+
+        if dataset_attrs is not None:
+            # Store dataset-specific attributes (if provided)
+            for dataset_name, attrs in dataset_attrs.items():
+                if dataset_name not in f:
+                    raise ValueError(
+                        f"Dataset '{dataset_name}' not found in {filepath}"
+                    )
+                dataset = f[dataset_name]
+                for attr_name, attr_value in attrs.items():
+                    dataset.attrs[attr_name] = attr_value
+                print(
+                    f"Successfully stored dataset-level attributes for '{dataset_name}'"
+                )
+
+
 # --- generator ---
-def split_data_generator(data:np.ndarray, split_size:int)-> Generator[np.ndarray, None, None]:
+def split_data_generator(splitsize: int, *data: np.ndarray):
     """
-    split data by split_size.
-    
-    return: generator
+    Splits multiple datasets into chunks of size `splitsize`, ensuring that all datasets have the same
+    first dimension size. The generator yields corresponding slices for each dataset.
+
+    :param data: Variable number of datasets (arrays).
+    :param splitsize: The size of each split (chunk).
+    :return: A generator yielding tuples of slices from each dataset.
     """
-    shape = data.shape
+    # Check that all input datasets have the same first dimension (number of samples)
+    num_samples = data[0].shape[0]
+    if not all(d.shape[0] == num_samples for d in data):
+        raise ValueError(
+            "All input datasets must have the same length along the first dimension."
+        )
 
-    num_splits = shape[0] // split_size
-    remaining_size = shape[0] % split_size
-
-    for i in range(num_splits):
-        start = i * split_size
-        end = start + split_size
-        yield data[start:end]
-
-    if remaining_size > 0:
-        start = num_splits * split_size
-        end = start + remaining_size
-        yield data[start:end].copy()  # Ensure a copy is made to avoid modifying the original data
-
-def split_data_generator2(data1:np.ndarray, data2:np.ndarray, 
-                          splitsize:int)->Generator[Tuple[np.ndarray, np.ndarray], None ,None]:
-    """
-    split 2 dataset by split_size, if first dimension is same.
-    
-    return: generator
-    """
-    
-    assert data1.shape[0] == data2.shape[0], "Dimension mismatch between the two input dataset"
-
-    num_samples = data1.shape[0]
     num_splits = num_samples // splitsize
     remainder = num_samples % splitsize
 
@@ -161,8 +233,8 @@ def split_data_generator2(data1:np.ndarray, data2:np.ndarray,
     for i in range(num_splits):
         start_idx = i * splitsize
         end_idx = (i + 1) * splitsize
-        yield data1[start_idx:end_idx], data2[start_idx:end_idx]
+        yield tuple(d[start_idx:end_idx] for d in data)
 
-    # Generate split for the remainder part
+    # Generate split for the remainder part, if any
     if remainder > 0:
-        yield data1[num_splits*splitsize:], data2[num_splits*splitsize:]
+        yield tuple(d[num_splits * splitsize :] for d in data)
