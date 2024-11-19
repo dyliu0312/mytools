@@ -2,7 +2,7 @@
 Functions for bins
 """
 
-from typing import Union
+from typing import Union, Tuple, List
 
 import numpy as np
 
@@ -45,7 +45,7 @@ def set_resbins(
         nx:int, ny:int,
         offset:int = 1,
         center:bool=True
-        )->tuple[np.ndarray, np.ndarray]:
+        )->Tuple[np.ndarray, np.ndarray]:
     """
     set stack result map bins.
     
@@ -86,10 +86,10 @@ def get_id_edge(
     return index
 
 def get_ids_edge(
-        coordinates:list[float],
-        bins:tuple[list[float], list[float], list[float]],
+        coordinates:List[float],
+        bins:Tuple[List[float], List[float], List[float]],
         right:bool=False
-        )->tuple[np.int64, np.int64, np.int64]:
+        )->Tuple[np.int64, np.int64, np.int64]:
     """
     get coordinates corresponding pixel indices in the map.
     
