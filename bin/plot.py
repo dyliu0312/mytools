@@ -670,10 +670,10 @@ def plot_hist_result(
     
 def plot_ellipses(
         ax,
-        xy_pos:list[Tuple[float,float]]=[(0,0)],
-        width: Union[float, list[float]]=1,
-        height:Union[float, list[float], None]=None,
-        angle: Union[float, list[float]]=0,
+        xy_pos:List[Tuple[float,float]]=[(0,0)],
+        width: Union[float, List[float]]=1,
+        height:Union[float, List[float], None]=None,
+        angle: Union[float, List[float]]=0,
         **kwargs
         ):
     """
@@ -711,12 +711,12 @@ def plot_ellipses(
 
 def plot_arcs(
         ax,
-        xy_pos: list[Tuple[float,float]]=[(0,0)],
-        width:  Union[float, list[float]]=1,
-        height: Union[float, list[float], None]=None,
-        angle:  Union[float, list[float]]=0,
-        theta1: Union[float, list[float]]=0,
-        theta2: Union[float, list[float]]=360,
+        xy_pos: List[Tuple[float,float]]=[(0,0)],
+        width:  Union[float, List[float]]=1,
+        height: Union[float, List[float], None]=None,
+        angle:  Union[float, List[float]]=0,
+        theta1: Union[float, List[float]]=0,
+        theta2: Union[float, List[float]]=360,
         **kwargs
         ):
     """
