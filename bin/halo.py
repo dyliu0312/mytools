@@ -145,7 +145,7 @@ def halo_fit_seprate(
         costheta (float, Optional): the valid area are selected within -costheta to costheta.
         print_fit_res (bool): whether to print the result of the fitting.
     Return:
-        fit_map, fit_paras, mask_array
+        fit_map, fit_paras, mask_bool_array
     """
 
     s1,s2 = data.shape
@@ -225,7 +225,7 @@ def halo_subtract(
         costheta (float): the valid area are selected within -costheta to costheta.
         print_fit_res (bool): whether to print the result of the fitting.
     Return:
-        fit, res
+        fitted_map_list, residuals_list, mask_bool_array 
     """
 
     fit = []
