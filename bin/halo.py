@@ -27,6 +27,7 @@ def cal_r(
         costheta (float, Optional): the valid area are selected within -costheta to costheta.
     Returns:
         r (np.ndarray): the radius of each grid.
+        v (np.ndarray): the boolen of the valid area.
     """
     point_array = np.array(point)
     vector = grids - point_array[None,:]
@@ -71,7 +72,7 @@ def halo_fit(data:np.ndarray,
         costheta (float, Optional): the valid area are selected within -costheta to costheta.
         print_fit_res (bool, Optional): whether to print the fit result.
     Returns:
-        fit_map, fit_paras, mask
+        fit_map, fit_paras, mask_bool_array
         
     """
 
@@ -120,7 +121,7 @@ def halo_fit(data:np.ndarray,
     fit_paras = res.x
     fit_map = get_fitmap(fit_paras,r1_indices,r2_indices)
     
-    return fit_map, fit_paras, v1+v2
+    return fit_map, fit_paras, ~(v1+v2).T
 
 def halo_fit_seprate(
         data:np.ndarray, 
