@@ -29,10 +29,10 @@ def get_filename(path: str) -> str:
 def delete_files(file_paths: List[str]) -> None:
     """
     Deletes files from the given list of file paths.
-    
+
     Args:
         file_paths (List[str]): A list of file paths to be deleted.
-        
+
     Prints:
         Messages indicating whether each file was deleted, not found, or caused an error.
     """
@@ -238,3 +238,33 @@ def split_data_generator(splitsize: int, *data: np.ndarray):
     # Generate split for the remainder part, if any
     if remainder > 0:
         yield tuple(d[num_splits * splitsize :] for d in data)
+
+
+# --- stack result---
+def get_stacked_result(
+    file_path: str, s_key: str = "Signal", m_key: str = "Mask"
+) -> np.ndarray:
+    """
+    Add up and average to get the stacked result from the HDF5 file.
+    Those datasets are seperately saved in groups with keys "Signal" and "Mask", e.g. "/0_500/Signal", "/0_500/Mask".
+
+    Args:
+        file_path (str): Path to the HDF5 file.
+        s_key (str): Key for the signal dataset. Defaults to "Signal".
+        m_key (str): Key for the mask dataset. Defaults to "Mask".
+
+    Returns:
+        result_array (np.ndarray): The stacked result (2d array).
+    """
+    result = []
+
+    def add_up(name, obj):
+        if isinstance(obj, h5.Group):
+            si = obj["Signal"][:]
+            mi = obj["Mask"][:]
+            s = np.ma.array(si, mask=mi)
+            result.append(s)
+
+    visititems_h5(file_path, add_up)
+    result_array = np.ma.array(result)
+    return result_array.sum(axis=0)

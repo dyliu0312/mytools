@@ -133,7 +133,7 @@ def halo_fit_seprate(
         ):
     """
     use a set of random numbers to be initial profile, use two triangle sector only to fit, get best fit profile by least_squares. 
-    Assuming two halo are not equally contributed .
+    Assuming two halo are NOT equally contributed .
     
     Args:
         data (np.ndarray): the data to be fitted.
@@ -145,7 +145,7 @@ def halo_fit_seprate(
         costheta (float, Optional): the valid area are selected within -costheta to costheta.
         print_fit_res (bool): whether to print the result of the fitting.
     Return:
-        fit_map, fit_paras, mask
+        fit_map, fit_paras, mask_array
     """
 
     s1,s2 = data.shape
@@ -204,7 +204,7 @@ def halo_fit_seprate(
     fit_paras = res.x
     fit_map = get_fitmap(fit_paras,r1_indices,r2_indices)
     
-    return fit_map, fit_paras, v1+v2
+    return fit_map, fit_paras, ~(v1+v2).T
 
 def halo_subtract(
         data:list, 
@@ -236,4 +236,4 @@ def halo_subtract(
         fit.append(fitmap)
         res.append(d-fitmap)
 
-    return fit, res
+    return fit, res, fit_mask

@@ -65,7 +65,7 @@ if __name__ == '__main__':
     DTYPE = np.float32 # the dtype of the MAP data, you may modify this for higher preccision, but **beware of memory usage**.
     TEMP_PREFIX = 'convolved_temp_out_'  # the prefix of temprary output file.
     OUT_SUFFIX = '_convolvedFASTbeam.hdf5' # the suffix of final output file.
-    WAIT_TIME = 300 #seconds, waiting for the multiprocessing result saving processes to be finished, to do further MAP reconstruction.
+    WAIT_TIME = 60 #seconds, waiting for the multiprocessing result saving processes to be finished, to do further MAP reconstruction.
     
     # --- input args ---
     map_path, out_path, nworker = args[1:]
@@ -93,14 +93,19 @@ if __name__ == '__main__':
     temp_out_file = []
     with mp.Pool(processes=nworker) as pool:
         for i,  map_slice in enumerate(map_data):
-            temp_out = out_path + TEMP_PREFIX + f'{i}.hdf5'
+            temp_out = out_path + filename +'_'+ TEMP_PREFIX + f'{i}.hdf5'
             temp_out_file.append(temp_out)
-            pool.apply_async(convolve_save, (map_slice, beam_kernel, temp_out, KEY, DTYPE))
+            pool.apply(convolve_save, (map_slice, beam_kernel, temp_out, KEY, DTYPE))
+            # pool.apply_async(convolve_save, (map_slice, beam_kernel, temp_out, KEY, DTYPE)) # it fail to create file
   
     print(f'Convolution process finished with {time.time()-t1} seconds.')
     
-    # --- sleep a period of time to wait the save processes fully finished.
-    time.sleep(WAIT_TIME)
+    # --- wait the save processes fully finished---
+    while True:
+        if all([is_exist(fn) for fn in temp_out_file]): # check exist of the temporary output files 
+            break
+        time.sleep(WAIT_TIME)
+        print('Waiting for the temporary output files to be saved')
     
     # --- del MAP data and collect space---
     del map_data
