@@ -6,7 +6,7 @@ Functions to fit and subtract halo contributions.
 from typing import Callable, Optional
 
 import numpy as np
-from bins import edge2center, get_id_edge, get_linbin
+from mytools.bins import edge2center, get_id_edge, get_linbin
 from scipy.optimize import least_squares
 
 

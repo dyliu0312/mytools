@@ -3,7 +3,7 @@ define some functions to calculate quantities.
 
 """
 
-from constant import (
+from mytools.constant import (
     PI,
     A_HI,
     HI_MASS,
@@ -216,7 +216,7 @@ def get_integration_time_FAST_HIIM(
     return factor*drift_integration_time(beamsize, **args)
 
 def tb_sky(
-    freq=HI_restwave
+    freq=HI_restfreq
     ):
     """
     calculate the brightness temperature of the sky.
@@ -374,7 +374,7 @@ def mass_to_brightness_temperature(
         
     return (1+z)**3 *c
 
-def unit_factor(current_unit, target_unit):
+def get_unit_factor(current_unit, target_unit):
     """
     Calculate the conversion factor between two units.
     
