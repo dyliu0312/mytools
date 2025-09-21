@@ -114,12 +114,13 @@ def make_figure(
     figsize: Tuple[float, float] = (6, 4),
     sharex: bool = True,
     sharey: bool = True,
-    gridspec_kw: Optional[dict] = {"wspace": 0.0, "hspace": 0.1},
-    subplot_kw: Optional[dict] = {
-        "aspect": "equal",
-    },
+    wspace: float = 0.0, 
+    hspace: float = 0.1,
+    aspect: str = "equal",
+    gridspec_kw: Optional[dict] = None,
+    subplot_kw: Optional[dict] = None,
     **kwargs,
-) -> Tuple[Figure, Axes]:
+)-> Tuple[Figure, Any]:
     """
     make a figure and axes with subplots.
 
@@ -134,17 +135,25 @@ def make_figure(
     Returns:
         figure and axes.
     """
-    fig, ax = plt.subplots(
+
+    g_kw = {"wspace": wspace, "hspace": hspace}
+    if gridspec_kw is not None:
+        g_kw.update(gridspec_kw)
+    
+    s_kw = {"aspect": aspect}
+    if subplot_kw is not None:
+        s_kw.update(subplot_kw)
+
+    return plt.subplots(
         nrows=nrows,
         ncols=ncols,
         figsize=figsize,
         sharex=sharex,
         sharey=sharey,
-        subplot_kw=subplot_kw,
-        gridspec_kw=gridspec_kw,
+        subplot_kw=s_kw,
+        gridspec_kw=g_kw,
         **kwargs,
     )
-    return fig, ax
 
 
 def plot_heatmap(
@@ -184,6 +193,8 @@ def plot_heatmap(
 
     pcm = ax.pcolormesh(*args, cmap=cmap, norm=norm)  # type: ignore
     # ax.set_aspect("equal", "box")  # type: ignore
+    # change ticks of pcolormesh to inside
+    ax.tick_params(axis="both", direction="in")
 
     if title is not None:
         ax.set_title(title)  # type: ignore
@@ -194,9 +205,9 @@ def plot_heatmap(
 
     if cbt is not None:
         cax = get_colorbar_cax(fig, ax, loc="right")  # type: ignore
-        # divider = make_axes_locatable(ax)
-        # cax = divider.append_axes("right", size="5%", pad=0.1)
         cbar = fig.colorbar(pcm, cax=cax, label=cbt)
+        # change ticks of colorbar to inside
+        cbar.ax.tick_params(axis="y", direction="in")
         return fig, ax, pcm, cbar
     else:
         return fig, ax, pcm
@@ -287,7 +298,7 @@ def plot_stack_fit_residual(
     """
 
     if fig is None:
-        fig, axes = make_figure(1, 3, figsize=(15, 5))
+        fig, axes = make_figure(1, 3, figsize=(16, 4))
 
     fig, axes = plot_heatmaps(
         data,
@@ -340,8 +351,8 @@ def plot_residuals(
         )  # type: ignore
         ax.label_outer()
 
-    cax = get_colorbar_cax(fig, ax)
-    cbar = plt.colorbar(pcm, cax=cax, label=cbt)
+    cax = get_colorbar_cax(fig, ax) # type: ignore
+    cbar = plt.colorbar(pcm, cax=cax, label=cbt) # type: ignore
 
     return fig, axes, cbar
 
@@ -454,13 +465,13 @@ def plot_profile_2c(
         width (float): width of the filament. Defaults to 0.32.
         fontsize (str): fontsize of the text. Defaults to "14".
         xlabel (str, list): x-axis labels. Defaults to ["Y", "X"].
-        ylabel (str, list): y-axis labels. Defaults to [r"$T$[$\mu$K]", None].
+        ylabel (str, list): y-axis labels. Defaults to [r"$T$[$\\mu$K]", None].
         title (str, list): subplot titles. Defaults to ["Transverse-section profile", \
             "Lengthwise-section profile"].
         color (str, list): line colors. Defaults to ["b", "r", "r", "k"].
         marker (str, list): line markers. Defaults to [".", "", "o", "o"].
         linestyle (str, list): line styles. Defaults to ["", "--", "--", "--"].
-        label (str, list): line labels. Defaults to [r"$|{\rm X}|< 0.5$", "Gaussian fit", \
+        label (str, list): line labels. Defaults to [r"$|{\\rm X}|< 0.5$", "Gaussian fit", \
             r"$T_{\rm f}$", r"$T_{\rm bg$"].
     Returns:
         (fig, axes): figure and axes
@@ -1043,7 +1054,7 @@ def plot_sector(
     theta2: Union[float, List[float]] = [135, 315],
     linestyle="--",
     ec="k",
-    linewidth="1.2",
+    linewidth=1.2,
     **kwargs,
 ):
     n_arcs = len(width)

@@ -127,9 +127,13 @@ def read_h5(
                 raise ValueError(
                     f"Key '{k}' not found. Available keys are: {available_keys}"
                 )
-            dataset = f[k][:]  # type: ignore
+            obj = f[k]
+            if k in f and not obj.shape == (): # type: ignore
+                dataset = obj[:] # type: ignore
+            else:
+                dataset = obj[()] # type: ignore
             if print_attrs:
-                print_dataset_attrs(f[k])
+                print_dataset_attrs(obj)
             return dataset
 
         # If a single key is provided, return the corresponding data
@@ -260,11 +264,11 @@ def get_stacked_result(
 
     def add_up(name, obj):
         if isinstance(obj, h5.Group):
-            si = obj["Signal"][:]
-            mi = obj["Mask"][:]
+            si = obj[s_key][:] # type: ignore
+            mi = obj[m_key][:] # type: ignore
             s = np.ma.array(si, mask=mi)
             result.append(s)
 
     visititems_h5(file_path, add_up)
     result_array = np.ma.array(result)
-    return result_array.sum(axis=0)
+    return result_array.mean(axis=0)

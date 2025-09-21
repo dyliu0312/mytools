@@ -3,7 +3,7 @@ Functions to fit and subtract halo contributions.
 
 """
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import numpy as np
 from mytools.bins import edge2center, get_id_edge, get_linbin
@@ -47,8 +47,8 @@ def cal_r(
     return r
 
 def halo_fit(data:np.ndarray, 
-             rbin_e:np.ndarray, 
-             xlim:list, 
+             rbin_e:np.ndarray=np.arange(0, 6, 0.04), 
+             xlim:list=[-3,3], 
              ylim:Optional[list]=None, 
              lc:list= [-1,0], 
              rc:list= [1,0], 
@@ -125,8 +125,8 @@ def halo_fit(data:np.ndarray,
 
 def halo_fit_seprate(
         data:np.ndarray, 
-        rbin_e:np.ndarray, 
-        xlim:list, 
+        rbin_e:np.ndarray=np.arange(0, 6, 0.04), 
+        xlim:list=[-3,3], 
         ylim:Optional[list]=None, 
         lc:list= [-1,0], rc:list= [1,0], 
         costheta:float = 1/2, 
@@ -208,7 +208,7 @@ def halo_fit_seprate(
     return fit_map, fit_paras, ~(v1+v2).T
 
 def halo_subtract(
-        data:list, 
+        data:Union[list, np.ndarray],
         f:Callable=halo_fit, 
         rbin_e:np.ndarray=np.arange(0,6,0.04),
         lim:list=[-3,3],
@@ -219,7 +219,7 @@ def halo_subtract(
     """
     for each data, fit a halo profile, and subtract it from the data.
     Args:
-        data (list): the data to be fitted and subtracted.
+        data (list or np.ndarray): the data to be fitted and subtracted.
         f (Callable): the function to fit the halo profile.
         rbin_e (np.ndarray): the edge of the radius bins.
         lim (list): the x range of the data.
@@ -228,13 +228,24 @@ def halo_subtract(
     Return:
         fitted_map_list, residuals_list, mask_bool_array 
     """
+    is_list = isinstance(data, list)
+    if is_list:
+        data = data
+    else:
+        data = [data]
 
     fit = []
     res = []
+    fit_mask = None
 
     for d in data:
-        fitmap,fitparas,fit_mask = f(d, rbin_e, lim, costheta=costheta, print_fit_res=print_fit_res, **kwargs)
+        fitmap,_,curr_fit_mask = f(d, rbin_e, lim, costheta=costheta, print_fit_res=print_fit_res, **kwargs)
         fit.append(fitmap)
         res.append(d-fitmap)
+        if fit_mask is None:
+            fit_mask = curr_fit_mask
 
-    return fit, res, fit_mask
+    if is_list:
+        return fit, res, fit_mask
+    else:
+        return fit[0], res[0], fit_mask
