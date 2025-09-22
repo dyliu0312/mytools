@@ -20,6 +20,14 @@ def arg_list(arg: Any, n: int = 1) -> List[Any]:
     """
     return [arg] * n if not isinstance(arg, list) else arg
 
+def get_minmax(data, fraction: float = 0.05) -> Tuple[float, float]:
+    """
+    get the min and max of data with quantile.
+    """
+    if isinstance(data, np.ma.MaskedArray):
+        data = data.compressed()
+    
+    return np.quantile(data, fraction), np.quantile(data, 1 - fraction)
 
 def get_ticks_labels(
     ticks: List[int] = [20, 60, 100],
@@ -72,9 +80,7 @@ def set_ticks(
 
     return ax
 
-
 def get_colorbar_cax(
-    fig: Figure,
     ax: Axes,
     loc: str = "right",
     w_pad: float = 0.01,
@@ -91,21 +97,32 @@ def get_colorbar_cax(
 
     # Calculate the position of the colorbar
     if loc == "right":
-        cax_x0 = bbox.x1 + w_pad
-        cax_y0 = bbox.y0
         cax_width = bbox.width * w_factor
         cax_height = bbox.height
+        cax_x0 = bbox.x1 + w_pad
+        cax_y0 = bbox.y0
     elif loc == "top":
-        cax_x0 = bbox.x0
-        cax_y0 = bbox.y1 + h_pad
         cax_width = bbox.width
         cax_height = bbox.height * h_factor
+        cax_x0 = bbox.x0
+        cax_y0 = bbox.y1 + h_pad
+    elif loc == "bottom":
+        cax_width = bbox.width
+        cax_height = bbox.height * h_factor
+        cax_x0 = bbox.x0
+        cax_y0 = bbox.y0 - h_pad - cax_height
 
     else:
-        raise ValueError(f"colorbar location = {loc} is supported")
+        raise ValueError(f"colorbar location = {loc} is not supported")
 
     # Create the colorbar axes
-    return fig.add_axes((cax_x0, cax_y0, cax_width, cax_height), **kwargs)
+    fig = ax.get_figure()
+
+    if fig is None:
+        raise ValueError("ax must be a matplotlib.axes.Axes instance")
+    
+    cax = fig.add_axes((cax_x0, cax_y0, cax_width, cax_height), **kwargs)
+    return cax
 
 
 def make_figure(
@@ -114,7 +131,7 @@ def make_figure(
     figsize: Tuple[float, float] = (6, 4),
     sharex: bool = True,
     sharey: bool = True,
-    wspace: float = 0.0, 
+    wspace: float = 0.1, 
     hspace: float = 0.1,
     aspect: str = "equal",
     gridspec_kw: Optional[dict] = None,
@@ -130,8 +147,11 @@ def make_figure(
         figsize (Tuple[float, float], optional): figure size. Defaults to (6, 4).
         sharex (bool, optional): share x axis or not. Defaults to True.
         sharey (bool, optional): share y axis or not. Defaults to True.
-        gridspec_kw (dict, optional): gridspec kwargs. Defaults to {"wspace": 0.1, "hspace": 0.1}.
-        subplot_kw (dict, optional): subplot kwargs. Defaults to {"aspect": "equal",}.
+        wspace (float, optional): width space between subplots. Defaults to 0.1.
+        hspace (float, optional): height space between subplots. Defaults to 0.1.
+        aspect (str, optional): aspect of subplots. Defaults to "equal".
+        gridspec_kw (dict, optional): gridspec kwargs. Defaults to None.
+        subplot_kw (dict, optional): subplot kwargs. Defaults to None.
     Returns:
         figure and axes.
     """
@@ -140,7 +160,10 @@ def make_figure(
     if gridspec_kw is not None:
         g_kw.update(gridspec_kw)
     
-    s_kw = {"aspect": aspect}
+    if aspect is not None:
+        s_kw = {"aspect": aspect}
+    else:
+        s_kw = {}
     if subplot_kw is not None:
         s_kw.update(subplot_kw)
 
@@ -158,27 +181,32 @@ def make_figure(
 
 def plot_heatmap(
     *args,
-    fig: Optional[Figure] = None,
     ax: Optional[Axes] = None,
-    cmap: str = "jet",
-    cbt: Optional[str] = None,
-    norm=None,
+    cmap: str = "viridis",
+    norm = "linear",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    tick_in: bool = True,
+    show_cbar: bool = True,
+    cbar_ax: Optional[Axes] = None,
+    cbar_loc: str = "right",
+    cbar_label: Optional[str] = None,
     title: Optional[str] = None,
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
-    **kwargs,
+    kw_makefigure: Optional[dict] = None,
+    kw_pcolormesh: Optional[dict] = None,
+    kw_cbar: Optional[dict] = None,
 ):
     """
     plot heatmap with colorbar.
     
     Args:
         x 
-        fig (matplotlib.figure.Figure, optional): figure to plot. Defaults is None, create a new figure.
         ax (matplotlib.axes.Axes, optional): axis to plot. Defaults is None, create a new axis.
-        cmap (str, optional): color map. Defaults is 'jet'.
+        cmap (str, optional): color map. Defaults is 'viridis'.
         cbt (str, optional): colorbar title. Defaults is None.
         norm (str, optional): colorbar norm. Defaults is None, use 'linear'. \
-            
             str type is **NOT** supported in low python verision(e.g. 3.8).\
                 Use normalize from matplolib.colors instead.
         title (str, optional): plot title. Defaults is None.
@@ -188,13 +216,47 @@ def plot_heatmap(
         figure, axes, pcolormesh object, and colorbar object if cbt is not None
  
     """
-    if fig is None:
-        fig, ax = make_figure(**kwargs)
+    if ax is None:
+        kw_fig = {"figsize": (6, 4)}
+        if kw_makefigure is not None:
+            kw_fig.update(kw_makefigure)
+        fig, ax = make_figure(**kw_fig)
+    else:
+        fig = ax.get_figure()
 
-    pcm = ax.pcolormesh(*args, cmap=cmap, norm=norm)  # type: ignore
-    # ax.set_aspect("equal", "box")  # type: ignore
-    # change ticks of pcolormesh to inside
-    ax.tick_params(axis="both", direction="in")
+    if ax is None:
+        raise ValueError("ax is None")
+    if fig is None:
+        raise ValueError("fig is None")
+    
+    n = len(args)
+
+    if n == 1:
+        data = args[0]
+    elif n == 2:
+        x, data = args
+        y = x
+    elif n == 3:
+        x, y, data = args
+    else:
+        raise ValueError("args must be 1, 2 or 3")
+    
+    if vmin is None or vmax is None:
+        _vmin, _vmax = get_minmax(data)
+        vmin = _vmin if vmin is None else vmin
+        vmax = _vmax if vmax is None else vmax
+    
+    p_kw = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
+    if kw_pcolormesh is not None:
+        p_kw.update(kw_pcolormesh)
+
+    if n == 1:
+        pcm = ax.pcolormesh(data, **p_kw)
+    else:
+        pcm = ax.pcolormesh(x, y, data, **p_kw) # type: ignore
+
+    if tick_in:
+        ax.tick_params(axis="both", direction="in")
 
     if title is not None:
         ax.set_title(title)  # type: ignore
@@ -203,29 +265,46 @@ def plot_heatmap(
     if ylabel is not None:
         ax.set_ylabel(ylabel)  # type: ignore
 
-    if cbt is not None:
-        cax = get_colorbar_cax(fig, ax, loc="right")  # type: ignore
-        cbar = fig.colorbar(pcm, cax=cax, label=cbt)
-        # change ticks of colorbar to inside
-        cbar.ax.tick_params(axis="y", direction="in")
-        return fig, ax, pcm, cbar
-    else:
-        return fig, ax, pcm
+    if show_cbar:
+        if cbar_ax is None:
+            cbar_ax = get_colorbar_cax(ax, loc=cbar_loc)  # type: ignore
+        if cbar_ax is None:
+            raise ValueError("cbar_ax is None")
+
+        orientation = "horizontal" if cbar_loc in ["bottom", "top"] else "vertical"
+        if cbar_label is None:
+            cbar_label = ""
+        cb_kw = {"label": cbar_label, "orientation": orientation}
+        if kw_cbar is not None:
+            cb_kw.update(kw_cbar)
+        cb = fig.colorbar(pcm, cax=cbar_ax, **cb_kw) # type: ignore
+        
+        if cbar_loc == "top":
+            cb.ax.xaxis.set_label_position("top")
+            cb.ax.xaxis.set_ticks_position("top")
+        if cbar_loc == "bottom":
+            cb.ax.xaxis.set_label_position("bottom")
+            cb.ax.xaxis.set_ticks_position("bottom")
+        if tick_in:
+            cb.ax.tick_params(axis="both", direction="in")
+
+    return ax
 
 
 def plot_heatmaps(
     data: List[np.ndarray],
-    fig: Optional[Figure] = None,
     axes: Union[List[Axes], Tuple[Axes], None] = None,
-    cmap: Union[str, list] = "jet",
+    cmap: Union[str, list] = "viridis",
+    show_cbar: bool = True,
     cbt: Union[str, list, None] = None,
-    norm=None,
+    norm: Union[str, list] = "linear",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
     title: Union[str, list, None] = None,
     xlabel: Union[str, list] = "X",
     ylabel: Union[str, list] = "Y",
     label_outer: bool = True,
-    *args,
-    **kwargs,
+    kw_makefigure: Optional[dict] = None,
 ):
     """
     plot multiple heatmaps in a row.
@@ -245,23 +324,31 @@ def plot_heatmaps(
     """
     n = len(data)
     cmap = arg_list(cmap, n)
+    show_cbar = arg_list(show_cbar, n) # type: ignore
     cbt = arg_list(cbt, n)
     norm = arg_list(norm, n)
+    vmin = arg_list(vmin, n) # type: ignore
+    vmax = arg_list(vmax, n) # type: ignore
     title = arg_list(title, n)
     xlabel = arg_list(xlabel, n)
     ylabel = arg_list(ylabel, n)
 
-    if fig is None:
-        fig, axes = make_figure(nrows=1, ncols=n, figsize=(4 * n, 4), *args, **kwargs)
+    if axes is None:
+        kw_fig = {"nrows": 1, "ncols": n, "figsize": (4 * n, 4)}
+        if kw_makefigure is not None:
+            kw_fig.update(kw_makefigure)
+        fig, axes = make_figure(**kw_fig)
 
     for i, ax in enumerate(list(axes)):  # type: ignore
         plot_heatmap(
             data[i],
-            fig=fig,
             ax=ax,
             cmap=cmap[i],
-            cbt=cbt[i],
             norm=norm[i],
+            vmin=vmin[i], # type: ignore
+            vmax=vmax[i], # type: ignore
+            show_cbar=show_cbar[i], # type: ignore
+            cbar_label=cbt[i],
             title=title[i],
             xlabel=xlabel[i],
             ylabel=ylabel[i],
@@ -270,14 +357,14 @@ def plot_heatmaps(
         if label_outer:
             ax.label_outer()
 
-    return fig, axes
+    return axes
 
 
 def plot_stack_fit_residual(
     data: list,
-    fig=None,
     axes: Union[list, tuple, None] = None,
     cmap: Union[str, list] = "jet",
+    show_cbar: bool = True,
     cbt: Union[str, list] = r"T[$\mu$K]",
     norm: Union[str, list] = ["log", "log", "linear"],
     sharey=True,
@@ -297,31 +384,38 @@ def plot_stack_fit_residual(
     plot stack, fit and residual map.
     """
 
-    if fig is None:
+    if axes is None:
         fig, axes = make_figure(1, 3, figsize=(16, 4))
 
-    fig, axes = plot_heatmaps(
+    axes = plot_heatmaps(
         data,
-        fig=fig,
         axes=axes,
         cmap=cmap,
+        show_cbar=show_cbar,
         cbt=cbt,
         norm=norm,
-        sharey=sharey,
+        kw_makefigure=dict(sharey=sharey),
         title=title,
         xlabel=xlabel,
         ylabel=ylabel,
     )
 
     if fit_mask is not None:
-        axes[1].pcolormesh(fit_mask, cmap="gray", alpha=alpha)  # type: ignore ## Plot mask region
+        # Plot mask region
+        plot_heatmap(
+            fit_mask.astype(int), 
+            ax=axes[1],  # type: ignore
+            cmap="gray", 
+            show_cbar=False,
+            kw_pcolormesh=dict(alpha=alpha)
+        )
 
     if xticks is not None:
         set_ticks(axes[0], xticks=xticks, xticklabels=xticklabels)  # type: ignore
         set_ticks(axes[1], xticks=xticks, xticklabels=xticklabels)  # type: ignore
         set_ticks(axes[2], xticks=xticks, xticklabels=xticklabels)  # type: ignore
 
-    return fig, axes
+    return axes
 
 
 def plot_residuals(
@@ -339,22 +433,20 @@ def plot_residuals(
         fig, axes = make_figure(1, 2, gridspec_kw={"wspace": 0.0, "hspace": 0.1})
 
     for i, ax in enumerate(list(axes)):  # type: ignore
-        _, _, pcm, *_ = plot_heatmap(
+        _ = plot_heatmap(
             data[i],
-            fig=fig,
             ax=ax,
             cmap=cmap,
             norm=norm,
+            show_cbar=True if i == len(axes) - 1 else False,
+            cbar_label=cbt,
             title=title[i],
             xlabel=xlabel,
             ylabel=ylabel,
         )  # type: ignore
         ax.label_outer()
 
-    cax = get_colorbar_cax(fig, ax) # type: ignore
-    cbar = plt.colorbar(pcm, cax=cax, label=cbt) # type: ignore
-
-    return fig, axes, cbar
+    return axes
 
 
 def plot_line(
