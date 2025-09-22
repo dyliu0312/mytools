@@ -197,30 +197,38 @@ def plot_heatmap(
     kw_makefigure: Optional[dict] = None,
     kw_pcolormesh: Optional[dict] = None,
     kw_cbar: Optional[dict] = None,
-):
+) -> Axes:
     """
     plot heatmap with colorbar.
     
     Args:
-        x 
+        x (array-like, optional): x axis. Defaults is None.
+        y (array-like, optional): y axis. Defaults is None.
+        data (array-like): data to plot.
         ax (matplotlib.axes.Axes, optional): axis to plot. Defaults is None, create a new axis.
         cmap (str, optional): color map. Defaults is 'viridis'.
-        cbt (str, optional): colorbar title. Defaults is None.
-        norm (str, optional): colorbar norm. Defaults is None, use 'linear'. \
-            str type is **NOT** supported in low python verision(e.g. 3.8).\
-                Use normalize from matplolib.colors instead.
+        norm (str, optional): colorbar norm. Defaults is None, use 'linear'.
+        vmin (float, optional): vmin of colorbar. Defaults is None.
+        vmax (float, optional): vmax of colorbar. Defaults is None.
+        tick_in (bool, optional): whether to turn the direction of ticks to in. Defaults is True.
+        show_cbar (bool, optional): whether to show colorbar. Defaults is True.
+        cbar_ax (matplotlib.axes.Axes, optional): colorbar axis. Defaults is None, create a new axis.
+        cbar_loc (str, optional): colorbar location. Defaults is 'right'.
+        cbar_label (str, optional): colorbar label. Defaults is None.
         title (str, optional): plot title. Defaults is None.
         xlabel (str, optional): x axis label. Defaults is None.
         ylabel (str, optional): y axis label. Defaults is None.
+        kw_makefigure (dict, optional): kwargs for make_figure. Defaults is None.
+        kw_pcolormesh (dict, optional): kwargs for pcolormesh. Defaults is None.
+        kw_cbar (dict, optional): kwargs for colorbar. Defaults is None.
     Returns:
-        figure, axes, pcolormesh object, and colorbar object if cbt is not None
- 
+        matplotlib.axes.Axes: axis with heatmap and colorbar.
     """
     if ax is None:
         kw_fig = {"figsize": (6, 4)}
         if kw_makefigure is not None:
             kw_fig.update(kw_makefigure)
-        fig, ax = make_figure(**kw_fig)
+        fig, ax = make_figure(**kw_fig) # type: ignore
     else:
         fig = ax.get_figure()
 
@@ -290,7 +298,6 @@ def plot_heatmap(
 
     return ax
 
-
 def plot_heatmaps(
     data: List[np.ndarray],
     axes: Union[List[Axes], Tuple[Axes], None] = None,
@@ -310,17 +317,26 @@ def plot_heatmaps(
     plot multiple heatmaps in a row.
 
     Notes:
-        All args (except fig and axes) are list, and the length of the list is the number of heatmaps to plot.
+        All args (except axes) are list, and the length of the list is the number of heatmaps to plot.
         If an arg is not a list, it will be converted to a list with arg be repeated.
 
     Args:
-        data: list of 2d numpy array.
+        data: list of np.ndarray, the data to plot.
+        axes: list of matplotlib.axes.Axes.
+        cmap: str or a list of str, the colormap.
+        show_cbar: bool or a list of bool, whether to show colorbar.
+        cbt: str or a list of str, the label of colorbar.
         sharey: bool, share y axis or not.
-        norm: matplotlib.color.norm (or str, may not suitable for low python version), or a list of norm.
-        Default is None, use 'linear' for all maps.
-        Other parameters are similar to norm.
+        norm: matplotlib.color.norm or str or a list of norm.
+        vmin: float or a list of float, the minimum value of the colormap.
+        vmax: float or a list of float, the maximum value of the colormap.
+        title: str or a list of str, the title of the plot.
+        xlabel: str or a list of str, the label of x axis.
+        ylabel: str or a list of str, the label of y axis.
+        label_outer: bool, whether to label the outer axes.
+        kw_makefigure: dict, kwargs for make_figure.
     Returns:
-        fig, axes
+        axes
     """
     n = len(data)
     cmap = arg_list(cmap, n)
