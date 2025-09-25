@@ -3,22 +3,42 @@ Functions to plot the stack results.
 
 """
 
-from typing import Union, Optional, List, Tuple, Any
+from typing import Any, List, Literal, Optional, Sequence, Tuple, Union
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.colors import Normalize
-from matplotlib.patches import Ellipse, Arc
+from matplotlib.patches import Arc, Ellipse
+from numpy.typing import NDArray
 
 
 def arg_list(arg: Any, n: int = 1) -> List[Any]:
     """
-    convert an arg to a list with length n.
-    if arg is not a list, return a list with arg repeated n times.
+    Convert an arg to a list with length n.
+    If arg is not a list, return a list with arg repeated n times.
+    If arg is a list, return a list with length n, if the length of arg is less than n, append the last element of arg to the list.
     """
-    return [arg] * n if not isinstance(arg, list) else arg
+    if not isinstance(arg, list):
+        arg = [arg] * n
+    if isinstance(arg, list) and len(arg) != n:
+        arg = arg + [arg[-1]] * (n - len(arg))
+    return arg
+
+
+def check_arg_list(arg: Any, ncol: int = 1, nrow: int = 1) -> List[Any]:
+    """
+    check the arg list. If arg is not a list, return a list with arg repeated n times.
+    If arg is a list, return a list with length n, if the length of arg is less than n, append the last element of arg to the list.
+    """
+    arg = arg_list(arg, ncol)
+    if isinstance(arg, list):
+        if len(arg) == ncol:
+            arg = arg * nrow
+        elif len(arg) != nrow * ncol:
+            arg = arg_list(arg, nrow * ncol)
+    return arg
+
 
 def get_minmax(data, fraction: float = 0.05) -> Tuple[float, float]:
     """
@@ -26,8 +46,9 @@ def get_minmax(data, fraction: float = 0.05) -> Tuple[float, float]:
     """
     if isinstance(data, np.ma.MaskedArray):
         data = data.compressed()
-    
+
     return np.quantile(data, fraction), np.quantile(data, 1 - fraction)
+
 
 def get_ticks_labels(
     ticks: List[int] = [20, 60, 100],
@@ -59,14 +80,13 @@ def set_ticks(
     yticklabels: Optional[List[str]] = None,
     share: bool = True,
     **kargs,
-) -> Axes:
+) -> None:
     """
     set the ticks and ticklabels for x and y axis.
 
     If share is True, x and y axis are shared the same ticks.
     """
     if xticks is None and yticks is None:
-        # raise ValueError('xticks and yticks cannot be both None')
         xticks, xticklabels = get_ticks_labels()
 
     if xticks is not None:
@@ -78,7 +98,6 @@ def set_ticks(
         if share and xticks is None:
             ax.set_xticks(yticks, yticklabels, **kargs)
 
-    return ax
 
 def get_colorbar_cax(
     ax: Axes,
@@ -120,7 +139,7 @@ def get_colorbar_cax(
 
     if fig is None:
         raise ValueError("ax must be a matplotlib.axes.Axes instance")
-    
+
     cax = fig.add_axes((cax_x0, cax_y0, cax_width, cax_height), **kwargs)
     return cax
 
@@ -128,16 +147,16 @@ def get_colorbar_cax(
 def make_figure(
     nrows: int = 1,
     ncols: int = 1,
-    figsize: Tuple[float, float] = (6, 4),
-    sharex: bool = True,
-    sharey: bool = True,
-    wspace: float = 0.1, 
+    figsize: Tuple[float, float] = (4, 3),
+    sharex: bool | Literal["none", "all", "row", "col"] = True,
+    sharey: bool | Literal["none", "all", "row", "col"] = True,
+    wspace: float = 0.1,
     hspace: float = 0.1,
-    aspect: str = "equal",
+    aspect: Optional[str] = "equal",
     gridspec_kw: Optional[dict] = None,
     subplot_kw: Optional[dict] = None,
     **kwargs,
-)-> Tuple[Figure, Any]:
+) -> Tuple[Figure, Any]:
     """
     make a figure and axes with subplots.
 
@@ -149,7 +168,7 @@ def make_figure(
         sharey (bool, optional): share y axis or not. Defaults to True.
         wspace (float, optional): width space between subplots. Defaults to 0.1.
         hspace (float, optional): height space between subplots. Defaults to 0.1.
-        aspect (str, optional): aspect of subplots. Defaults to "equal".
+        aspect (str, optional): aspect of subplots. Defaults to "equal". Set to None for auto aspect.
         gridspec_kw (dict, optional): gridspec kwargs. Defaults to None.
         subplot_kw (dict, optional): subplot kwargs. Defaults to None.
     Returns:
@@ -159,7 +178,7 @@ def make_figure(
     g_kw = {"wspace": wspace, "hspace": hspace}
     if gridspec_kw is not None:
         g_kw.update(gridspec_kw)
-    
+
     if aspect is not None:
         s_kw = {"aspect": aspect}
     else:
@@ -183,13 +202,14 @@ def plot_heatmap(
     *args,
     ax: Optional[Axes] = None,
     cmap: str = "viridis",
-    norm = "linear",
+    norm: str = "linear",
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
+    fraction: float = 0.05,
     tick_in: bool = True,
     show_cbar: bool = True,
     cbar_ax: Optional[Axes] = None,
-    cbar_loc: str = "right",
+    cbar_loc: Literal["right", "top", "bottom"] = "right",
     cbar_label: Optional[str] = None,
     title: Optional[str] = None,
     xlabel: Optional[str] = None,
@@ -200,20 +220,21 @@ def plot_heatmap(
 ) -> Axes:
     """
     plot heatmap with colorbar.
-    
+
     Args:
         x (array-like, optional): x axis. Defaults is None.
         y (array-like, optional): y axis. Defaults is None.
         data (array-like): data to plot.
-        ax (matplotlib.axes.Axes, optional): axis to plot. Defaults is None, create a new axis.
+        ax (matplotlib.axes.Axes, optional): axis to plot. Defaults is None, create a new axis with `make_figure`.
         cmap (str, optional): color map. Defaults is 'viridis'.
         norm (str, optional): colorbar norm. Defaults is None, use 'linear'.
-        vmin (float, optional): vmin of colorbar. Defaults is None.
-        vmax (float, optional): vmax of colorbar. Defaults is None.
+        vmin (float, optional): vmin of colorbar. Defaults is None, to be calculated with `get_minmax`.
+        vmax (float, optional): vmax of colorbar. Defaults is None, to be calculated with `get_minmax`.
+        fraction (float, optional): fraction of data to be used to calculate vmin and vmax. Defaults is 0.05.
         tick_in (bool, optional): whether to turn the direction of ticks to in. Defaults is True.
         show_cbar (bool, optional): whether to show colorbar. Defaults is True.
-        cbar_ax (matplotlib.axes.Axes, optional): colorbar axis. Defaults is None, create a new axis.
-        cbar_loc (str, optional): colorbar location. Defaults is 'right'.
+        cbar_ax (matplotlib.axes.Axes, optional): colorbar axis. Defaults is None, create a new axis with `get_colorbar_cax`.
+        cbar_loc (str, optional): colorbar location. Defaults is 'right'. Options are 'right', 'top', 'bottom'.
         cbar_label (str, optional): colorbar label. Defaults is None.
         title (str, optional): plot title. Defaults is None.
         xlabel (str, optional): x axis label. Defaults is None.
@@ -225,10 +246,10 @@ def plot_heatmap(
         matplotlib.axes.Axes: axis with heatmap and colorbar.
     """
     if ax is None:
-        kw_fig = {"figsize": (6, 4)}
+        kw_fig = {"figsize": (4, 3)}
         if kw_makefigure is not None:
             kw_fig.update(kw_makefigure)
-        fig, ax = make_figure(**kw_fig) # type: ignore
+        fig, ax = make_figure(**kw_fig)  # type: ignore
     else:
         fig = ax.get_figure()
 
@@ -236,7 +257,7 @@ def plot_heatmap(
         raise ValueError("ax is None")
     if fig is None:
         raise ValueError("fig is None")
-    
+
     n = len(args)
 
     if n == 1:
@@ -248,12 +269,12 @@ def plot_heatmap(
         x, y, data = args
     else:
         raise ValueError("args must be 1, 2 or 3")
-    
+
     if vmin is None or vmax is None:
-        _vmin, _vmax = get_minmax(data)
+        _vmin, _vmax = get_minmax(data, fraction=fraction)
         vmin = _vmin if vmin is None else vmin
         vmax = _vmax if vmax is None else vmax
-    
+
     p_kw = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
     if kw_pcolormesh is not None:
         p_kw.update(kw_pcolormesh)
@@ -261,7 +282,7 @@ def plot_heatmap(
     if n == 1:
         pcm = ax.pcolormesh(data, **p_kw)
     else:
-        pcm = ax.pcolormesh(x, y, data, **p_kw) # type: ignore
+        pcm = ax.pcolormesh(x, y, data, **p_kw)  # type: ignore
 
     if tick_in:
         ax.tick_params(axis="both", direction="in")
@@ -285,8 +306,8 @@ def plot_heatmap(
         cb_kw = {"label": cbar_label, "orientation": orientation}
         if kw_cbar is not None:
             cb_kw.update(kw_cbar)
-        cb = fig.colorbar(pcm, cax=cbar_ax, **cb_kw) # type: ignore
-        
+        cb = fig.colorbar(pcm, cax=cbar_ax, **cb_kw)  # type: ignore
+
         if cbar_loc == "top":
             cb.ax.xaxis.set_label_position("top")
             cb.ax.xaxis.set_ticks_position("top")
@@ -298,21 +319,27 @@ def plot_heatmap(
 
     return ax
 
+
 def plot_heatmaps(
-    data: List[np.ndarray],
-    axes: Union[List[Axes], Tuple[Axes], None] = None,
-    cmap: Union[str, list] = "viridis",
-    show_cbar: bool = True,
-    cbt: Union[str, list, None] = None,
-    norm: Union[str, list] = "linear",
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    title: Union[str, list, None] = None,
-    xlabel: Union[str, list] = "X",
-    ylabel: Union[str, list] = "Y",
+    data: List[NDArray],
+    axes: Optional[List[Axes]] = None,
+    cmap: Union[str, List[str]] = "viridis",
+    norm: Union[str, List[str]] = "linear",
+    vmin: Union[float, List[float], None] = None,
+    vmax: Union[float, List[float], None] = None,
+    fraction: float = 0.05,
+    tick_in: bool = True,
+    show_cbar: Union[bool, List[bool]] = True,
+    cbar_loc: Literal["right", "top", "bottom"] = "right",
+    cbar_label: Union[str, List[str], None] = None,
+    title: Union[str, List[str], None] = None,
+    xlabel: Union[str, List[str]] = "X",
+    ylabel: Union[str, List[str]] = "Y",
     label_outer: bool = True,
     kw_makefigure: Optional[dict] = None,
-):
+    kw_pcolormesh: Optional[dict] = None,
+    kw_cbar: Optional[dict] = None,
+) -> List[Axes]:
     """
     plot multiple heatmaps in a row.
 
@@ -324,36 +351,44 @@ def plot_heatmaps(
         data: list of np.ndarray, the data to plot.
         axes: list of matplotlib.axes.Axes.
         cmap: str or a list of str, the colormap.
-        show_cbar: bool or a list of bool, whether to show colorbar.
-        cbt: str or a list of str, the label of colorbar.
-        sharey: bool, share y axis or not.
         norm: matplotlib.color.norm or str or a list of norm.
         vmin: float or a list of float, the minimum value of the colormap.
         vmax: float or a list of float, the maximum value of the colormap.
+        fraction: float, the fraction used to calculate the minimum and maximum value of the colormap.
+        tick_in: bool, whether to show ticks inside the plot.
+        show_cbar: bool or a list of bool, whether to show colorbar.
+        cbar_loc: str, the location of colorbar. Defaults is "right".
+        cbar_label: str or a list of str, the label of colorbar.
         title: str or a list of str, the title of the plot.
         xlabel: str or a list of str, the label of x axis.
         ylabel: str or a list of str, the label of y axis.
         label_outer: bool, whether to label the outer axes.
         kw_makefigure: dict, kwargs for make_figure.
+        kw_pcolormesh: dict, kwargs for pcolormesh.
+        kw_cbar: dict, kwargs for colorbar.
     Returns:
         axes
     """
     n = len(data)
     cmap = arg_list(cmap, n)
-    show_cbar = arg_list(show_cbar, n) # type: ignore
-    cbt = arg_list(cbt, n)
     norm = arg_list(norm, n)
-    vmin = arg_list(vmin, n) # type: ignore
-    vmax = arg_list(vmax, n) # type: ignore
+    vmin = arg_list(vmin, n)  # type: ignore
+    vmax = arg_list(vmax, n)  # type: ignore
+
+    show_cbar = arg_list(show_cbar, n)  # type: ignore
+    cbar_label = arg_list(cbar_label, n)
     title = arg_list(title, n)
     xlabel = arg_list(xlabel, n)
     ylabel = arg_list(ylabel, n)
 
     if axes is None:
-        kw_fig = {"nrows": 1, "ncols": n, "figsize": (4 * n, 4)}
+        kw_fig = {"nrows": 1, "ncols": n, "figsize": (4 * n, 3)}
         if kw_makefigure is not None:
             kw_fig.update(kw_makefigure)
         fig, axes = make_figure(**kw_fig)
+
+    if axes is None:
+        raise ValueError("axes is None")
 
     for i, ax in enumerate(list(axes)):  # type: ignore
         plot_heatmap(
@@ -361,13 +396,18 @@ def plot_heatmaps(
             ax=ax,
             cmap=cmap[i],
             norm=norm[i],
-            vmin=vmin[i], # type: ignore
-            vmax=vmax[i], # type: ignore
-            show_cbar=show_cbar[i], # type: ignore
-            cbar_label=cbt[i],
+            vmin=vmin[i],  # type: ignore
+            vmax=vmax[i],  # type: ignore
+            fraction=fraction,
+            tick_in=tick_in,
+            show_cbar=show_cbar[i],  # type: ignore
+            cbar_loc=cbar_loc,
+            cbar_label=cbar_label[i],
             title=title[i],
             xlabel=xlabel[i],
             ylabel=ylabel[i],
+            kw_pcolormesh=kw_pcolormesh,
+            kw_cbar=kw_cbar,
         )
 
         if label_outer:
@@ -377,40 +417,45 @@ def plot_heatmaps(
 
 
 def plot_stack_fit_residual(
-    data: list,
-    axes: Union[list, tuple, None] = None,
-    cmap: Union[str, list] = "jet",
+    data: List[NDArray],
+    axes: Optional[List[Axes]] = None,
+    cmap: Union[str, List[str]] = ["viridis", "viridis", "RdBu"],
+    norm: Union[str, List[str]] = ["symlog", "symlog", "linear"],
+    vmin: Union[float, List[float], None] = None,
+    vmax: Union[float, List[float], None] = None,
+    fraction: float = 0.05,
     show_cbar: bool = True,
-    cbt: Union[str, list] = r"T[$\mu$K]",
-    norm: Union[str, list] = ["log", "log", "linear"],
-    sharey=True,
-    title: Union[str, list] = [
+    cbar_label: Union[str, List[str]] = r"T[$\mu$K]",
+    kw_makefigure: Optional[dict] = dict(sharey=True),
+    title: Union[str, List[str]] = [
         "Pairwise-stacked map",
         "Fitted halo contribution",
         "Filament signal",
     ],
-    xlabel: Union[str, list] = "X",
-    ylabel: Union[str, list] = "Y",
-    xticks: Optional[list] = None,
-    xticklabels: Optional[list] = None,
-    fit_mask: Optional[np.ndarray] = None,
-    alpha=0.15,
-):
+    xlabel: Union[str, List[str]] = "X",
+    ylabel: Union[str, List[str]] = "Y",
+    xticks: Optional[List[int]] = None,
+    xticklabels: Optional[List[str]] = None,
+    fit_mask: Optional[NDArray] = None,
+    alpha: float = 0.15,
+) -> List[Axes]:
     """
-    plot stack, fit and residual map.
+    plot stack, fit and residual map for comparison.
     """
 
     if axes is None:
-        fig, axes = make_figure(1, 3, figsize=(16, 4))
+        fig, axes = make_figure(1, 3, figsize=(12, 3), **kw_makefigure)  # type: ignore
 
     axes = plot_heatmaps(
         data,
         axes=axes,
         cmap=cmap,
-        show_cbar=show_cbar,
-        cbt=cbt,
         norm=norm,
-        kw_makefigure=dict(sharey=sharey),
+        vmin=vmin,
+        vmax=vmax,
+        fraction=fraction,
+        show_cbar=show_cbar,
+        cbar_label=cbar_label,
         title=title,
         xlabel=xlabel,
         ylabel=ylabel,
@@ -419,72 +464,92 @@ def plot_stack_fit_residual(
     if fit_mask is not None:
         # Plot mask region
         plot_heatmap(
-            fit_mask.astype(int), 
+            fit_mask.astype(int),
             ax=axes[1],  # type: ignore
-            cmap="gray", 
+            cmap="gray",
             show_cbar=False,
-            kw_pcolormesh=dict(alpha=alpha)
+            kw_pcolormesh=dict(alpha=alpha),
         )
 
     if xticks is not None:
         set_ticks(axes[0], xticks=xticks, xticklabels=xticklabels)  # type: ignore
-        set_ticks(axes[1], xticks=xticks, xticklabels=xticklabels)  # type: ignore
-        set_ticks(axes[2], xticks=xticks, xticklabels=xticklabels)  # type: ignore
 
     return axes
 
 
 def plot_residuals(
-    data: list,
-    fig=None,
-    axes=None,
-    norm=Normalize(-10, 40),
-    cmap="jet",
-    cbt=r"T[$\mu$K]",
-    title=["HI only", "HI + noise"],
-    xlabel="X",
-    ylabel="Y",
-):
-    if fig is None:
-        fig, axes = make_figure(1, 2, gridspec_kw={"wspace": 0.0, "hspace": 0.1})
+    data: List[NDArray],
+    axes: Optional[List[Axes]] = None,
+    norm: Union[str, List[str]] = "linear",
+    vmin: Union[float, List[float]] = -10,
+    vmax: Union[float, List[float]] = 40,
+    fraction: float = 0.05,
+    tick_in: bool = True,
+    show_cbar: Union[bool, List[bool]] = [False, True],
+    cmap: Union[str, List[str]] = "viridis",
+    cbar_loc: str = "right",
+    cbar_label: Union[str, List[str]] = r"T[$\mu$K]",
+    title: Union[str, List[str]] = ["HI only", "HI + noise"],
+    xlabel: Union[str, List[str]] = "X",
+    ylabel: Union[str, List[str]] = "Y",
+    kw_makefigure: Optional[dict] = dict(
+        figsize=(6, 3),
+        wspace=0.0,
+        hspace=0.0,
+    ),
+    kw_pcolormesh: Optional[dict] = None,
+    kw_cbar: Optional[dict] = None,
+) -> List[Axes]:
+    """
+    Plot residual maps (HI only and HI + noise) for comparison.
+    """
 
-    for i, ax in enumerate(list(axes)):  # type: ignore
-        _ = plot_heatmap(
-            data[i],
-            ax=ax,
-            cmap=cmap,
-            norm=norm,
-            show_cbar=True if i == len(axes) - 1 else False,
-            cbar_label=cbt,
-            title=title[i],
-            xlabel=xlabel,
-            ylabel=ylabel,
-        )  # type: ignore
-        ax.label_outer()
+    if axes is None:
+        fig, axes = make_figure(1, 2, **kw_makefigure)  # type: ignore
+    if axes is None:
+        raise ValueError("axes must be provided")
+
+    plot_heatmaps(
+        data,
+        axes,
+        cmap,
+        norm,
+        vmin,
+        vmax,
+        fraction,
+        tick_in,
+        show_cbar,
+        cbar_loc,  # type: ignore
+        cbar_label,  # type: ignore
+        title,
+        xlabel,
+        ylabel,
+        kw_pcolormesh=kw_pcolormesh,
+        kw_cbar=kw_cbar,
+    )
 
     return axes
 
 
 def plot_line(
-    x: list,
-    y: list,
-    fig=None,
-    ax=None,
+    x: List[Union[NDArray, List[float]]],
+    y: List[Union[NDArray, List[float]]],
+    ax: Optional[Axes] = None,
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
     title: Optional[str] = None,
-    color: Union[str, list, None] = None,
-    marker: Union[str, list, None] = None,
-    linestyle: Union[str, list, None] = None,
-    label: Union[str, list, None] = None,
-):
+    color: Union[str, List[str], List[Union[str, None]], List[None], None] = None,
+    marker: Union[str, List[str], List[Union[str, None]], List[None], None] = None,
+    linestyle: Union[str, List[str], List[Union[str, None]], List[None], None] = None,
+    label: Union[str, List[str], List[Union[str, None]], List[None], None] = None,
+    tick_in: bool = True,
+) -> Axes:
     """
     plot a line or lines.
 
     Args:
         x (list): x data points.
         y (list): y data points.
-        fig (matplotlib.figure.Figure, optional): figure object. Defaults is None, create a new figure.
         ax (matplotlib.axes.Axes, optional): axes object. Defaults is None, use the axes of new created figure.
         xlabel (str, optional): x label. Defaults is None.
         ylabel (str, optional): y label. Defaults is None.
@@ -493,70 +558,84 @@ def plot_line(
         marker (str, list, optional): marker of the line. Defaults is None.
         linestyle (str, list, optional): linestyle of the line. Defaults is None.
         label (str, list, optional): label of the line. Defaults is None.
+        tick_in (bool, optional): whether to show ticks inside the axes. Defaults is True.
     Returns:
-        (fig and axes): figure and axes object.
+        ax (matplotlib.axes.Axes): axes object.
     """
-    if fig is None:
+    if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(5, 4))
 
-    x_array = np.array(x)
+    nline = len(x)
 
-    if len(x_array.shape) == 1:
-        x_array = x_array.reshape(1, -1)
+    colors = arg_list(color, nline)
+    markers = arg_list(marker, nline)
+    linestyles = arg_list(linestyle, nline)
+    labels = arg_list(label, nline)
 
-    n, m = x_array.shape
+    # Plot lines with labels first
+    for i in range(nline):
+        la = labels[i]
+        if la is not None:
+            ax.plot(
+                x[i],
+                y[i],
+                color=colors[i],
+                linestyle=linestyles[i],
+                marker=markers[i],
+                label=la,
+            )
+    if any(la is not None for la in labels):
+        ax.legend()
 
-    color = arg_list(color, n)
-    marker = arg_list(marker, n)
-    linestyle = arg_list(linestyle, n)
-    label = arg_list(label, n)
-    for i in range(n):
-        ax.plot(
-            x_array[i],
-            y[i],
-            color=color[i],
-            linestyle=linestyle[i],
-            marker=marker[i],
-            label=label[i],
-        )  # type: ignore
+    # Plot lines without labels
+    for i in range(nline):
+        la = labels[i]
+        if la is None:
+            ax.plot(
+                x[i],
+                y[i],
+                color=colors[i],
+                linestyle=linestyles[i],
+                marker=markers[i],
+            )
 
     if xlabel is not None:
-        ax.set_xlabel(xlabel)  # type: ignore
+        ax.set_xlabel(xlabel)
     if ylabel is not None:
-        ax.set_ylabel(ylabel)  # type: ignore
+        ax.set_ylabel(ylabel)
     if title is not None:
-        ax.set_title(title)  # type: ignore
-    if label is not None:
-        ax.legend()  # type: ignore
+        ax.set_title(title)
+    if tick_in:
+        ax.tick_params(axis="both", which="both", direction="in")
 
-    return fig, ax
+    return ax
 
 
 def plot_profile_2c(
-    x: list,
-    y: list,
+    x: List[Union[NDArray, List[float]]],
+    y: List[Union[NDArray, List[float]]],
     cut: int = 2,
-    fig=None,
-    axes=None,
-    text_pos: List[list] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
+    axes: Optional[List[Axes]] = None,
+    text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
     width: float = 0.32,
-    fontsize: str = "14",
-    xlabel: Union[str, list, None] = ["Y", "X"],
-    ylabel: Union[str, list, None] = [r"$T$[$\mu$K]", None],
-    title: Union[str, list, None] = [
+    fontsize: Union[float, List[float]] = 14,
+    xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
+    ylabel: Union[str, List[Union[str, None]], None] = [r"$T$[$\mu$K]", None],
+    title: Union[str, List[Union[str, None]], None] = [
         "Transverse-section profile",
         "Lengthwise-section profile",
     ],
-    color: Union[str, list, None] = ["b", "r", "r", "k"],
-    marker: Union[str, list, None] = [".", "", "o", "o"],
-    linestyle: Union[str, list, None] = ["", "--", "--", "--"],
-    label: Union[str, list, None] = [
+    color: Union[str, List[str], None] = ["b", "r", "r", "k"],
+    marker: Union[str, List[str], None] = [".", "", "o", "o"],
+    linestyle: Union[str, List[str], None] = ["", "--", "--", "--"],
+    label: Union[str, List[Union[str, None]], None] = [
         r"$|{\rm X}|< 0.5$",
         "Gaussian fit",
         r"$T_{\rm f}$",
         r"$T_{\rm bg}$",
     ],
-):
+    tick_in: bool = True,
+) -> List[Axes]:
     """
     plot profiles in two column subplots.
 
@@ -566,12 +645,11 @@ def plot_profile_2c(
         cut (int): separate the data points into two parts, \
             e.g. cut=2 means the data points in the first two rows are plotted in the first subplot, \
                 and rest are plotted in the second subplot.
-        fig (Figure, optional): figure object. Defaults to None.
         axes (Axes, optional): axes object. Defaults to None.
         text_pos (List[list]): text position. Defaults to [[-0.45, 0.6], [-0.45, -2], [-2, 0.6]] \
             for filament, background and width.
-        width (float): width of the filament. Defaults to 0.32.
-        fontsize (str): fontsize of the text. Defaults to "14".
+        width (float): width of the filament to show on the left panel. Defaults to 0.32.
+        fontsize (str): fontsize of the text. Defaults to 14.
         xlabel (str, list): x-axis labels. Defaults to ["Y", "X"].
         ylabel (str, list): y-axis labels. Defaults to [r"$T$[$\\mu$K]", None].
         title (str, list): subplot titles. Defaults to ["Transverse-section profile", \
@@ -581,14 +659,23 @@ def plot_profile_2c(
         linestyle (str, list): line styles. Defaults to ["", "--", "--", "--"].
         label (str, list): line labels. Defaults to [r"$|{\\rm X}|< 0.5$", "Gaussian fit", \
             r"$T_{\rm f}$", r"$T_{\rm bg$"].
+        tick_in (bool): whether to show ticks inside the axes. Defaults to True.
     Returns:
-        (fig, axes): figure and axes
+        axes (list): axes object.
 
     """
-    if fig is None:
-        fig, axes = plt.subplots(
-            1, 2, figsize=(6, 4), sharey=True, gridspec_kw={"wspace": 0}
+    if axes is None:
+        fig, axes = make_figure(
+            1,
+            2,
+            figsize=(6, 4),
+            sharey=True,
+            sharex=False,
+            wspace=0,
+            aspect=None,
         )
+    if axes is None:
+        raise ValueError("axes is None.")
 
     try:
         x_left, x_right = x[:cut], x[cut:]
@@ -596,26 +683,25 @@ def plot_profile_2c(
     except IndexError as ie:
         raise ValueError("cut index is out of the range.") from ie
 
-    n = len(x)
+    nline = len(x)
     xlabel = arg_list(xlabel, 2)
     ylabel = arg_list(ylabel, 2)
     title = arg_list(title, 2)
 
-    color = arg_list(color, n)
-    marker = arg_list(marker, n)
-    linestyle = arg_list(linestyle, n)
-    label = arg_list(label, n)
+    color = arg_list(color, nline)
+    marker = arg_list(marker, nline)
+    linestyle = arg_list(linestyle, nline)
+    label = arg_list(label, nline)
+    fontsize = arg_list(fontsize, len(text_pos))
 
     for i, ax in enumerate(list(axes)):  # type: ignore
         c = color[:cut] if i == 0 else color[cut:]
         m = marker[:cut] if i == 0 else marker[cut:]
         ls = linestyle[:cut] if i == 0 else linestyle[cut:]
         lb = label[:cut] if i == 0 else label[cut:]
-
         plot_line(
-            x_left if i == 0 else x_right,
+            x_left if i == 0 else x_right,  # type: ignore
             y_left if i == 0 else y_right,
-            fig=fig,
             ax=ax,
             xlabel=xlabel[i],
             ylabel=ylabel[i],
@@ -624,6 +710,7 @@ def plot_profile_2c(
             marker=m,
             linestyle=ls,
             label=lb,
+            tick_in=tick_in,
         )
         # add horizontal lines that marker T = 0
         ax.axhline(0, linestyle="--", c="gray")
@@ -635,63 +722,214 @@ def plot_profile_2c(
                 r"$<T_{\rm f}>$ = %.2f $\mu$K, $\sigma_{T_{\rm f}}$ = %.2f $\mu$K"
                 % (mf, sf)
             )
-            ax.text(*text_pos[0], strf, color="r", fontsize=fontsize)
+            ax.text(*text_pos[0], s=strf, color="r", fontsize=fontsize[0])
             # background
             mb, sb = np.mean(y_right[1]), np.std(y_right[1])
             strb = (
                 r"$<T_{\rm bg}>$ = %.2f $\mu$K, $\sigma_{T_{\rm bg}}$ = %.2f $\mu$K"
                 % (mb, sb)
             )
-            ax.text(*text_pos[1], strb, color="k", fontsize=fontsize)
+            ax.text(*text_pos[1], s=strb, color="k", fontsize=fontsize[1])
         # add text that marker the width of filament
         else:
             ax.text(
                 *text_pos[2],
-                r"$w_{\rm t} = %.2f$" % width,
+                s=r"$w_{\rm t} = %.2f$" % width,
                 color="r",
-                fontsize=fontsize,
+                fontsize=fontsize[2],
             )
 
-    return fig, axes
+    return axes
 
 
-def plot_profile_2c2r(
-    x: List[list],
-    y: List[list],
-    cut: list = [4, 2],
-    fig=None,
-    axes=None,
-    text_pos: List[list] = [[[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]]] * 2,
-    width: float = [0.32] * 2,
-    fontsize: str = ["14"] * 2,
-    xlabel: List[list] = [[None] * 2, ["Y", "X"]],
-    ylabel: list = [
-        [r"$T$[$\mu$K] (HI only)", None],
-        [r"$T$[$\mu$K] (HI + noise)", None],
-    ],
-    title: List[list] = [
-        ["Transverse-section profile", "Lengthwise-section profile"],
-        [None] * 2,
-    ],
-    color: List = ["b", "r", "r", "k"] * 2,
-    marker: list = [".", "", "o", "o"] * 2,
-    linestyle: list = ["", "--", "--", "--"] * 2,
-    label: List = [r"$|{\rm X}|< 0.5$", "Gaussian fit", r"$T_{\rm f}$", r"$T_{\rm bg}$"]
-    + [None] * 4,
-):
+def plot_profile_2r(
+    x: List[List[Union[NDArray, List[float]]]],
+    y: List[List[Union[NDArray, List[float]]]],
+    cut: int = 2,
+    axes: Union[Tuple[Axes], List[Axes], None] = None,
+    text_pos: List[List[float]] = [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]],
+    width: Union[float, List[float]] = 0.32,
+    fontsize: Union[float, List[float]] = 14,
+    title: Union[str, List[str], None] = None,
+    xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
+    ylabel: Union[str, List[Union[str, None]], None] = r"T[$\mu$K]",
+    color: Union[str, List[str], None] = None,
+    marker: Union[str, List[str], None] = None,
+    linestyle: Union[str, List[str]] = "--",
+    label: Union[str, List[str], None] = None,
+    tick_in: bool = True,
+) -> Union[List[Axes], Tuple[Axes]]:
     """ 
-    plot lines in two column two row subplots. The top and bottom rows are shared the same args.
+    plot lines in two row subplots. 
     
     Args:
         x (List[list]): x data points.
         y (List[list]): y data points.
-        cut (List[int]): separate the data points into two parts, \
-            e.g. cut=[2,1] means the data points in the first two row \
-                are plotted in the top two subplots respectively, \
-                    and rest are plotted in the bottom two subplots, \
-                        with one in left panel,and the others in the right panel.
-        fig (Figure, optional): figure object. Defaults to None.
-        axes (Axes, optional): axes object. Defaults to None.
+        cut (int): cut index to separate the data into upper and bottom two parts. Defaults to 2. \
+            i.e. The upper and bottom panels of the first subplot is showing x[0, :cut] and x[0, cut:] respectively.
+        axes (List[Axes], Tuple[Axes], None): axes object. Defaults to None.
+        text_pos (list): text positions. Defaults to [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]].
+        width (float, list): width of the filament to show on the upper pannel. Defaults to 0.32.
+        fontsize (float): fontsize of the text. Defaults to 14.
+        title (str, list): titles of the subplots. Defaults to None.
+        xlabel_up (str, list): x labels of the upper pannels. Defaults to "Y".
+        xlabel_down (str, list): x labels of the lower pannels. Defaults to "X". Set to None to same as xlabel_up.
+        ylabel_up (str, list): y labels of the upper pannels. Defaults to r"T[$\\mu$K]".
+        ylabel_down (str, list): y labels of the lower pannels. Defaults to None to same as ylabel_up.
+        color (str, list): colors of the lines. Defaults to None.
+        marker (str, list): markers of the lines. Defaults to None.
+        linestyle (str, list): linestyles of the lines. Defaults to '--'.
+        label (str, list): labels of the lines. Defaults to None.
+        tick_in (bool): whether to show the ticks inside the subplots. Defaults to True.
+    """
+
+    ncol = len(x)
+    nline = len(x[0])
+    nrow = 2
+    ntext = 3
+
+    if axes is None:
+        fig, axes = make_figure(
+            2,
+            ncol,
+            figsize=(4 * ncol + 2, 8),
+            sharey="row",
+            sharex="row",
+            wspace=0,
+            hspace=0.4,
+            aspect=None,
+        )
+    if axes is None:
+        raise ValueError("axes is None.")
+
+    ## chenck line parameters
+    color = check_arg_list(color, nline, ncol)
+    marker = check_arg_list(marker, nline, ncol)
+    linestyle = check_arg_list(linestyle, nline, ncol)
+    label = check_arg_list(label, nline, ncol)
+
+    # check text parameters
+    text_pos = check_arg_list(text_pos, ntext, ncol)
+    fontsize = check_arg_list(fontsize, ntext, ncol)
+    width = arg_list(width, ncol)
+
+    # check xlabels
+    xlabel = check_arg_list(xlabel, nrow, ncol)
+    ylabel = check_arg_list(ylabel, nrow, ncol)
+    title = check_arg_list(title, nrow, ncol)
+
+    for i in range(ncol):
+        st, ed = i * nline, (i + 1) * nline
+        try:
+            x_up, x_down = x[i][:cut], x[i][cut:]
+            y_up, y_down = y[i][:cut], y[i][cut:]
+            c_up, c_down = color[st:ed][:cut], color[st:ed][cut:]
+            m_up, m_down = marker[st:ed][:cut], marker[st:ed][cut:]
+            ls_up, ls_down = linestyle[st:ed][:cut], linestyle[st:ed][cut:]
+            la_up, la_down = label[st:ed][:cut], label[st:ed][cut:]
+
+            _text_pos = text_pos[i * ntext : (i + 1) * ntext]
+            _xlabel = xlabel[i * nrow : (i + 1) * nrow]
+            _ylabel = ylabel[i * nrow : (i + 1) * nrow]
+            _title = title[i * nrow : (i + 1) * nrow]
+
+        except IndexError as ie:
+            raise ValueError("cut index is out of the range.") from ie
+
+        # plot upper pannel
+        ax_up = axes[0, i] if ncol > 1 else axes[0]  # type: ignore
+        plot_line(
+            x_up,
+            y_up,
+            ax_up,
+            xlabel=_xlabel[0],
+            ylabel=_ylabel[0],
+            title=_title[0],
+            color=c_up,
+            marker=m_up,
+            linestyle=ls_up,
+            label=la_up,
+            tick_in=tick_in,
+        )
+        ax_up.axhline(0, linestyle="--", c="gray")
+        strw = r"$w_{\rm t} = %.2f$" % width[i]
+        ax_up.text(*_text_pos[2], s=strw, color="r", fontsize=fontsize[0])
+
+        # plot lower pannel
+        ax_down = axes[1, i] if ncol > 1 else axes[1]  # type: ignore
+        plot_line(
+            x_down,
+            y_down,
+            ax_down,
+            xlabel=_xlabel[1],
+            ylabel=_ylabel[1],
+            title=_title[1],
+            color=c_down,
+            marker=m_down,
+            linestyle=ls_down,
+            label=la_down,
+            tick_in=tick_in,
+        )
+        ax_down.axhline(0, linestyle="--", c="gray")
+
+        # filament
+        mf, sf = np.mean(y_down[0]), np.std(y_down[0])
+        strf = r"$<T_{\rm f}>$ = %.2f $\mu$K, $\sigma_{T_{\rm f}}$ = %.2f $\mu$K" % (
+            mf,
+            sf,
+        )
+        ax_down.text(*_text_pos[0], s=strf, color="r", fontsize=fontsize[1])
+        # background
+        mb, sb = np.mean(y_down[1]), np.std(y_down[1])
+        strb = r"$<T_{\rm bg}>$ = %.2f $\mu$K, $\sigma_{T_{\rm bg}}$ = %.2f $\mu$K" % (
+            mb,
+            sb,
+        )
+        ax_down.text(*_text_pos[1], s=strb, color="k", fontsize=fontsize[2])
+
+    return axes
+
+
+def plot_profile_2c2r(
+    x: List[List[Union[NDArray, List[float]]]],
+    y: List[List[Union[NDArray, List[float]]]],
+    cut: int = 2,
+    axes: Union[Tuple[Axes], None] = None,
+    text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
+    width: Union[float, List[float]] = [0.32] * 2,
+    fontsize: Union[float, List[float]] = [14.0] * 3,
+    xlabel: Union[str, List[Union[str, None]], None] = [None, None, "Y", "X"],
+    ylabel: Union[str, List[Union[str, None]], None] = [
+        r"$T$[$\mu$K] (HI only)",
+        None,
+        r"$T$[$\mu$K] (HI + noise)",
+        None,
+    ],
+    title: List[Union[str, None]] = [
+        "Transverse-section profile",
+        "Lengthwise-section profile",
+        None,
+    ],
+    color: Union[str, List[str]] = ["b", "r", "r", "k"],
+    marker: Union[str, List[str]] = [".", "", "o", "o"],
+    linestyle: Union[str, List[str]] = ["", "--", "--", "--"],
+    label: Union[str, List[Union[str, None]], None] = [
+        r"$|{\rm X}|< 0.5$",
+        "Gaussian fit",
+        r"$T_{\rm f}$",
+        r"$T_{\rm bg}$",
+        None,
+    ],
+    tick_in: bool = True,
+) -> Tuple[Axes]:
+    """
+    plot lines in two column two row subplots. The top and bottom rows are shared the same args.
+
+    Args:
+        x (List[list]): x data points.
+        y (List[list]): y data points.
+        cut (int): cut index. Defaults to 2.
+        axes (Axes, optional): axes object. Defaults to None to create a new figure.
         text_pos (List[list]): text position.
         width (float): width of the filament.
         fontsize (str): fontsize of the text.
@@ -702,209 +940,91 @@ def plot_profile_2c2r(
         marker (list): line markers.
         linestyle (list): line styles.
         label (list): line labels.
+        tick_in (bool): whether to show the ticks inside the subplots. Defaults to True.
     Returns:
-        (fig, axes): figure and axes objects.
+        axes (Tuple[Axes]): axes object.
     """
 
-    if fig is None:
-        fig, axes = plt.subplots(
+    if axes is None:
+        fig, axes = make_figure(
             2,
             2,
             figsize=(8, 6),
             sharex="col",
             sharey=True,
-            gridspec_kw={"wspace": 0, "hspace": 0},
+            wspace=0,
+            hspace=0,
+            aspect=None,
         )
+    if axes is None:
+        raise ValueError("axes must be specified.")
 
-    try:
-        x_top, x_bottom = x[: cut[0]], x[cut[0] :]
-        y_top, y_bottom = y[: cut[0]], y[cut[0] :]
-    except IndexError as ie:
-        raise ValueError("first cut index is out of the range.") from ie
+    ncol = nrow = len(x)
+    nline = len(x[0])
+    ntext = 3
 
-    n = len(x)
-    xlabel_list = arg_list(xlabel, 2)
-    ylabel_list = arg_list(ylabel, 2)
-    title_list = arg_list(title, 2)
+    if nrow != 2:
+        raise ValueError("This function only supports two column two row subplots.")
 
-    color_list = arg_list(color, n)
-    marker_list = arg_list(marker, n)
-    linestyle_list = arg_list(linestyle, n)
-    label_list = arg_list(label, n)
+    ## chenck line parameters
+    color = check_arg_list(color, nline, nrow)
+    marker = check_arg_list(marker, nline, nrow)
+    linestyle = check_arg_list(linestyle, nline, nrow)
+    label = check_arg_list(label, nline, nrow)
 
-    for i in range(2):
-        ax = list(axes)[i]  # type: ignore
-        x_data = x_top if i == 0 else x_bottom
-        y_data = y_top if i == 0 else y_bottom
-        c = color_list[: cut[0]] if i == 0 else color_list[cut[0] :]
-        m = marker_list[: cut[0]] if i == 0 else marker_list[cut[0] :]
-        ls = linestyle_list[: cut[0]] if i == 0 else linestyle_list[cut[0] :]
-        lb = label_list[: cut[0]] if i == 0 else label_list[cut[0] :]
+    # check text parameters
+    text_pos = check_arg_list(text_pos, ntext, nrow)
+    width = arg_list(width, nrow)
+    fontsize = arg_list(fontsize, nrow)
+
+    # check xlabels
+    xlabel = check_arg_list(xlabel, ncol, nrow)
+    ylabel = check_arg_list(ylabel, ncol, nrow)
+    title = check_arg_list(title, ncol, nrow)
+
+    for i in range(nrow):
         plot_profile_2c(
-            x_data,
-            y_data,
-            cut=cut[1],
-            fig=fig,
-            axes=ax,
-            text_pos=text_pos[i],
+            x[i],
+            y[i],
+            cut=cut,
+            axes=list(axes)[i],  # type: ignore
+            text_pos=text_pos[:ntext] if i == 0 else text_pos[ntext:],
             width=width[i],
             fontsize=fontsize[i],
-            xlabel=xlabel_list[i],
-            ylabel=ylabel_list[i],
-            title=title_list[i],
-            color=c,
-            marker=m,
-            linestyle=ls,
-            label=lb,
+            xlabel=xlabel[:ncol] if i == 0 else xlabel[ncol:],
+            ylabel=ylabel[:ncol] if i == 0 else ylabel[ncol:],
+            title=title[:ncol] if i == 0 else title[ncol:],
+            color=color[:nline] if i == 0 else color[nline:],
+            marker=marker[:nline] if i == 0 else marker[nline:],
+            linestyle=linestyle[:nline] if i == 0 else linestyle[nline:],
+            label=label[:nline] if i == 0 else label[nline:],
+            tick_in=tick_in,
         )
 
-    return fig, axes
-
-
-def plot_profile_2r(
-    x: List[list],
-    y: List[list],
-    cut: int = 2,
-    fig=None,
-    axes=None,
-    text_pos=[[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]],
-    width=0.32,
-    fontsize: str = "14",
-    title: Union[str, List[str]] = None,
-    xlabel_up: Union[str, List[str]] = "Y",
-    xlabel_down: Union[str, List[str]] = "X",
-    ylabel: Union[str, List[str]] = [r"T[$\mu$K]"] * 2,
-    color: Union[str, List[str]] = ["b", "r", "r", "k"],
-    marker: Union[str, List[str]] = [".", "", "o", "o"],
-    linestyle: Union[str, List[str]] = ["", "--", "--", "--"],
-    label: Union[str, List[str]] = [
-        r"$|{\rm X}|< 0.5$",
-        "Gaussian fit",
-        r"$T_{\rm f}$",
-        r"$T_{\rm bg}$",
-    ]
-):
-    n = len(x)
-    m = len(x[0])
-
-    if fig is None:
-        fig, axes = plt.subplots(
-            2,
-            n,
-            figsize=(4*n+2, 8),
-            sharey="row",
-            sharex="row",
-            gridspec_kw={"wspace": 0, 'hspace':0.2},
-        )
-
-    ylabel = arg_list(ylabel, 2)
-    xlabel_up = arg_list(xlabel_up, n)
-    xlabel_down = arg_list(xlabel_down, n)
-    width = arg_list(width, n)
-    title = (
-        arg_list(title, n)
-        if title is not None
-        else [f"Subplot {i + 1}" for i in range(n)]
-    )
-
-    color = arg_list(color, m)
-    marker = arg_list(marker, m)
-    linestyle = arg_list(linestyle, m)
-    label = arg_list(label, m)
-
-    for i in range(n):
-        la = label if (i == n - 1) else [None] * m
-
-        try:
-            x_up, x_down = x[i][:cut], x[i][cut:]
-            y_up, y_down = y[i][:cut], y[i][cut:]
-            c_up, c_down = color[:cut], color[cut:]
-            m_up, m_dowm = marker[:cut], marker[cut:]
-            ls_up, ls_down = linestyle[:cut], linestyle[cut:]
-            la_up, la_down = la[:cut], la[cut:]
-
-        except IndexError as ie:
-            raise ValueError("cut index is out of the range.") from ie
-
-        yla = ylabel if i == 0 else [None] * 2
-
-        ax_up = axes[0, i]
-        plot_line(
-            x_up,
-            y_up,
-            fig,
-            ax_up,
-            ylabel=yla[0],
-            xlabel=xlabel_up[i],
-            title=title[i],
-            color=c_up,
-            marker=m_up,
-            linestyle=ls_up,
-            label=la_up,
-        )
-        ax_up.axhline(0, linestyle="--", c="gray")
-        ax_up.text(
-            *text_pos[2],
-            r"$w_{\rm t} = %.2f$" % width[i],
-            color="r",
-            fontsize=fontsize,
-        )
-
-        ax_down = axes[1, i]
-        plot_line(
-            x_down,
-            y_down,
-            fig,
-            ax_down,
-            ylabel=yla[1],
-            xlabel=xlabel_down[i],
-            title=None,
-            color=c_down,
-            marker=m_dowm,
-            linestyle=ls_down,
-            label=la_down,
-        )
-        ax_down.axhline(0, linestyle="--", c="gray")
-
-        # filament
-        mf, sf = np.mean(y_down[0]), np.std(y_down[0])
-        strf = r"$<T_{\rm f}>$ = %.2f $\mu$K, $\sigma_{T_{\rm f}}$ = %.2f $\mu$K" % (
-            mf,
-            sf,
-        )
-        ax_down.text(*text_pos[0], strf, color="r", fontsize=fontsize)
-        # background
-        mb, sb = np.mean(y_down[1]), np.std(y_down[1])
-        strb = r"$<T_{\rm bg}>$ = %.2f $\mu$K, $\sigma_{T_{\rm bg}}$ = %.2f $\mu$K" % (
-            mb,
-            sb,
-        )
-        ax_down.text(*text_pos[1], strb, color="k", fontsize=fontsize)
-
-    return fig, axes
+    return axes
 
 
 def plot_hist(
-    data: list,
-    bins: Optional[list] = None,
-    fig=None,
-    ax=None,
+    data: List[NDArray],
+    bins: Union[int, Sequence[float], str, None, list] = None,
+    ax: Optional[Axes] = None,
     label: Union[str, list, None] = None,
     color: Union[str, list, None] = None,
     density: Union[bool, list] = True,
     histtype: Union[str, list] = "step",
     title: Optional[str] = None,
     xlabel: Optional[str] = None,
-    ylabel="PDF",
+    ylabel: str = "PDF",
     **kwargs,
-):
+) -> Axes:
     """
     plot the histogram, defualt is step density histogram
     """
 
-    if fig is None:
+    if ax is None:
         fig, ax = plt.subplots(figsize=(6, 4))
-
+    if ax is None:
+        raise ValueError("ax must be specified.")
     data_array = np.array(data)
     if len(data_array.shape) == 1:
         data_array = data_array.reshape(-1, 1)
@@ -916,16 +1036,30 @@ def plot_hist(
     density = arg_list(density, n)
     histtype = arg_list(histtype, n)
 
-    for i in range(n):
-        ax.hist(
-            data_array[i],
-            bins=bins[i],
-            label=label[i],
-            color=color[i],
-            density=density[i],
-            histtype=histtype[i],
-            **kwargs,
-        )  # type: ignore
+    for i, la in enumerate(label):
+        if la is not None:
+            ax.hist(
+                data_array[i],
+                bins=bins[i],
+                label=la,
+                color=color[i],
+                density=density[i],
+                histtype=histtype[i],
+                **kwargs,
+            )
+    if any([la is not None for la in label]):
+        ax.legend()
+
+    for i, la in enumerate(label):
+        if la is None:
+            ax.hist(
+                data_array[i],
+                bins=bins[i],
+                color=color[i],
+                density=density[i],
+                histtype=histtype[i],
+                **kwargs,
+            )
 
     if title is not None:
         ax.set_title(title)  # type: ignore
@@ -934,35 +1068,32 @@ def plot_hist(
     if ylabel is not None:
         ax.set_ylabel(ylabel)  # type: ignore
 
-    if label is not None:
-        ax.legend()  # type: ignore
-
-    return fig, ax
+    return ax
 
 
 def plot_hist_2c(
-    data: list,
-    bins=None,
+    data: List[NDArray],
+    bins: Union[int, Sequence[float], str, None, list] = None,
     cut: int = 1,
-    fig=None,
-    axes=None,
-    sharey=True,
-    label=None,
-    color=None,
-    density=True,
-    histtype="step",
-    title=None,
-    xlabel=None,
-    ylabel=["PDF", None],
+    axes: Optional[List[Axes]] = None,
+    sharey: bool = True,
+    label: Union[str, list, None] = None,
+    color: Union[str, list, None] = None,
+    density: Union[bool, list] = True,
+    histtype: Union[str, list] = "step",
+    title: Union[str, list, None] = None,
+    xlabel: Union[str, list, None] = None,
+    ylabel: Union[str, list, None] = ["PDF", None],
     **kwargs,
-):
+) -> List[Axes]:
     """
     plot the histogram in two column subplots, defualt is step density histogram
     """
 
-    if fig is None:
+    if axes is None:
         fig, axes = plt.subplots(1, 2, figsize=(9, 4), sharey=sharey)
-
+    if axes is None:
+        raise ValueError("ax must be specified.")
     try:
         data_left, data_right = data[:cut], data[cut:]
     except IndexError as ie:
@@ -988,7 +1119,6 @@ def plot_hist_2c(
         plot_hist(
             data_left if i == 0 else data_right,
             bins=b,
-            fig=fig,
             ax=ax,
             label=lb,
             color=c,
@@ -1001,37 +1131,37 @@ def plot_hist_2c(
         )
 
     if sharey:
-        fig.subplots_adjust(wspace=0)
+        fig = axes[0].get_figure()
+        if fig is not None:
+            fig.subplots_adjust(wspace=0)
 
-    return fig, axes
+    return axes
 
 
 def plot_hist_result(
-    data: list,
-    bins: Optional[list] = None,
+    data: List[NDArray],
+    bins: Union[int, Sequence[float], str, None, list] = None,
     cut: int = 4,
-    fig=None,
-    axes=None,
-    sharey=True,
-    label: list = [None] * 4 + ["C", "L", "R", "B"],
-    color: list = ["r", "b", "g", "k"] * 2,
-    density=True,
-    histtype="step",
-    title: list = ["HI only", "HI + noise"],
-    xlabel=r"$T$[$\mu$K]",
-    ylabel=["PDF", None],
+    axes: Optional[List[Axes]] = None,
+    sharey: bool = True,
+    label: Union[str, list, None] = [None] * 4 + ["C", "L", "R", "B"],
+    color: Union[str, list, None] = ["r", "b", "g", "k"] * 2,
+    density: Union[bool, list] = True,
+    histtype: Union[str, list] = "step",
+    title: Union[str, list, None] = ["HI only", "HI + noise"],
+    xlabel: Union[str, list, None] = r"$T$[$\mu$K]",
+    ylabel: Union[str, list, None] = ["PDF", None],
     **kwargs,
-):
+) -> List[Axes]:
     """
     plot the histogram results in two column subplots, defualt is step density histogram.
     """
 
-    fig, axes = plot_hist_2c(
+    axes = plot_hist_2c(
         data,
         bins=bins,
         cut=cut,
         sharey=sharey,
-        fig=fig,
         axes=axes,
         label=label,
         color=color,
@@ -1046,17 +1176,17 @@ def plot_hist_result(
     for ax in axes:  # type: ignore
         ax.axvline(0, linestyle="--", c="gray", zorder=-1000)
 
-    return fig, axes
+    return axes
 
 
 def plot_ellipses(
-    ax,
+    ax: Axes,
     xy_pos: List[Tuple[float, float]] = [(0, 0)],
     width: Union[float, List[float]] = 1,
     height: Union[float, List[float], None] = None,
     angle: Union[float, List[float]] = 0,
     **kwargs,
-):
+) -> None:
     """
     Plot ellipses (or circles) on the given axis.
 
@@ -1096,7 +1226,7 @@ def plot_ellipses(
 
 
 def plot_arcs(
-    ax,
+    ax: Axes,
     xy_pos: List[Tuple[float, float]] = [(0, 0)],
     width: Union[float, List[float]] = 1,
     height: Union[float, List[float], None] = None,
@@ -1104,7 +1234,7 @@ def plot_arcs(
     theta1: Union[float, List[float]] = 0,
     theta2: Union[float, List[float]] = 360,
     **kwargs,
-):
+) -> None:
     """
     Plot arcs on the given axis.
 
@@ -1125,11 +1255,11 @@ def plot_arcs(
     if n == 1:
         a = Arc(
             xy_pos[0],
-            width,
-            height,
-            angle=angle,
-            theta1=theta1,
-            theta2=theta2,
+            width,  # type: ignore
+            height,  # type: ignore
+            angle=angle,  # type: ignore
+            theta1=theta1,  # type: ignore
+            theta2=theta2,  # type: ignore
             **kwargs,
         )  # type: ignore
         ax.add_patch(a)
@@ -1153,10 +1283,10 @@ def plot_arcs(
 
 
 def plot_sector(
-    ax,
+    ax: Axes,
     xy_pos: List[Tuple[float, float]] = [(40, 60), (80, 60)],
     width: List[float] = [10, 30, 50, 70, 90, 110],
-    height: List[float] = None,
+    height: Optional[List[float]] = None,
     angle: Union[float, List[float]] = 0,
     theta1: Union[float, List[float]] = [45, 225],
     theta2: Union[float, List[float]] = [135, 315],
@@ -1164,7 +1294,7 @@ def plot_sector(
     ec="k",
     linewidth=1.2,
     **kwargs,
-):
+) -> None:
     n_arcs = len(width)
     n_sectors = len(xy_pos)
 
@@ -1176,8 +1306,8 @@ def plot_sector(
                 width=width,
                 height=height,
                 angle=angle,
-                theta1=theta1[j],
-                theta2=theta2[j],
+                theta1=theta1[j],  # type: ignore
+                theta2=theta2[j],  # type: ignore
                 linestyle=linestyle,
                 ec=ec,
                 linewidth=linewidth,
