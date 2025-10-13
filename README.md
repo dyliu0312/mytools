@@ -12,7 +12,7 @@ The main modules are:
 * ```estimate.py   ```: to estimate the signal level,
 * ```bins.py       ```: helper functions for bins.
 
-There are also two useful scripts in the [bin](bin) folder:
+There are also two useful scripts in the [scripts](scripts) folder:
 * ```convolve.py   ```: to finish beam convolution (FAST main beam),
 * ```stack_pair.py ```: to run the galaxy pairwise stacking.
 
@@ -29,9 +29,7 @@ It was tested on Python>=3.8, and requires the following packages:
 
 ## Note:
 Python3.8 does not support str input for *norm* args. 
-So if you want to use it on Python=3.8, you may try to remove the default str values for *norm* args in [plot.py](mytools/plot.py) (Line 271), and use `matplotlib.colors.Normlize` and `matplotlib.colors.LogNorm`  instead.
-
-But for convenience, I suggest you to use **Python>=3.9**.
+So use Python version: **Python>=3.9**.
 
 
 # Usage
@@ -45,7 +43,7 @@ freq2z(1.3*u.GHz)
 The example Jupyter notebooks are in the [test](test) folder.
 
 
-**If you want to run the ```stack_pair.py``` script, please see and modify the example parameters set in the [stack_pair.sh](bin/stack_pair.sh) file.**
+**If you want to run the ```stack_pair.py``` script, please see and modify the example parameters set in the [stack_pair.sh](slurm/stack_pair.sh) file.**
 
 
 
