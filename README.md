@@ -26,10 +26,7 @@ It was tested on Python>=3.8, and requires the following packages:
 * [h5py](https://www.h5py.org/)
 * [astropy](https://www.astropy.org/)
 * [scipy](https://scipy.org/)
-
-Python3.8 does not support str input for *norm* args. 
-So use Python version: **Python>=3.9**.
-
+* [tqdm](https://github.com/tqdm/tqdm) (only for [stack_pair.py](scripts/stack_pair.py) script)
 
 # Usage
 
@@ -38,7 +35,7 @@ After installing, you can use the functions in the modules, for example:
 from mytools.calculation import freq2z, u
 freq2z(1.3*u.GHz)
 ```
-## Note:
+# Notes
 The example Jupyter notebooks are in the [test](test) folder.
 
 

@@ -7,8 +7,8 @@ name = "mytools"
 version = "0.1.0"
 description = "A collection of python tools used in my HI filament stacking simulation work, arxiv:2411.03988."
 readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.9"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
 dependencies = [
     "numpy",
     "scipy",
@@ -20,6 +20,7 @@ dependencies = [
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -28,7 +29,7 @@ classifiers = [
 ]
 
 [project.urls]
-homepage = "https://github.com/dyliu/mytools"
+homepage = "https://github.com/dyliu0312/mytools"
 
 [tool.setuptools.packages.find]
 where = ["src"]

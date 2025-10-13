@@ -10,8 +10,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.patches import Arc, Ellipse
-from numpy.typing import NDArray
-
+from matplotlib.colors import LogNorm, SymLogNorm, Normalize
 
 def arg_list(arg: Any, n: int = 1, m: Optional[int] = None) -> List[Any]:
     """
@@ -158,8 +157,8 @@ def make_figure(
     nrows: int = 1,
     ncols: int = 1,
     figsize: Tuple[float, float] = (4, 3),
-    sharex: bool | Literal["none", "all", "row", "col"] = True,
-    sharey: bool | Literal["none", "all", "row", "col"] = True,
+    sharex: Union[bool, Literal["none", "all", "row", "col"]] = True,
+    sharey: Union[bool, Literal["none", "all", "row", "col"]] = True,
     wspace: float = 0.1,
     hspace: float = 0.1,
     aspect: Optional[str] = "equal",
@@ -208,11 +207,35 @@ def make_figure(
     )
 
 
+def get_norm(
+        norm: Literal["linear", "log", "symlog"] = "linear",
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+    ):
+    """
+    get norm for colorbar.
+
+    Args:
+        norm (str, optional): norm type. Defaults to "linear".
+        vmin (float, optional): vmin of colorbar. Defaults to None.
+        vmax (float, optional): vmax of colorbar. Defaults to None.
+    Returns:
+        norm.
+    """
+    if norm == "linear":
+        return Normalize(vmin=vmin, vmax=vmax)
+    elif norm == "log":
+        return LogNorm(vmin=vmin, vmax=vmax)
+    elif norm == "symlog":
+        return SymLogNorm(linthresh=1e-3, vmin=vmin, vmax=vmax)
+    else:
+        raise ValueError(f"norm = {norm} is not supported")
+    
 def plot_heatmap(
     *args,
     ax: Optional[Axes] = None,
     cmap: str = "viridis",
-    norm: str = "linear",
+    norm: Union[Literal["linear", "log", "symlog"], Normalize] = "linear",
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     q: float = 5,
@@ -289,7 +312,13 @@ def plot_heatmap(
     vmin = _vmin if vmin is None else vmin
     vmax = _vmax if vmax is None else vmax
 
-    p_kw = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
+    # --- Set norm ---
+    if isinstance(norm, str):
+        norm = get_norm(norm, vmin=vmin, vmax=vmax)
+        p_kw = {"cmap": cmap, "norm": norm}
+    else:
+        p_kw = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
+
     if kw_pcolormesh is not None:
         p_kw.update(kw_pcolormesh)
 
@@ -343,7 +372,7 @@ def plot_heatmap(
 
 
 def plot_heatmaps(
-    data: List[NDArray],
+    data: List[np.ndarray],
     axes: Optional[List[Axes]] = None,
     cmap: Union[str, List[str]] = "viridis",
     norm: Union[str, List[str]] = "linear",
@@ -421,7 +450,7 @@ def plot_heatmaps(
             data[i],
             ax=ax,
             cmap=cmap[i],
-            norm=norm[i],
+            norm=norm[i], # type: ignore
             vmin=vmin[i],  # type: ignore
             vmax=vmax[i],  # type: ignore
             q=q,
@@ -445,7 +474,7 @@ def plot_heatmaps(
 
 
 def plot_stack_fit_residual(
-    data: List[NDArray],
+    data: List[np.ndarray],
     axes: Optional[List[Axes]] = None,
     cmap: Union[str, List[str]] = ["viridis", "viridis", "RdBu_r"],
     norm: Union[str, List[str]] = ["symlog", "symlog", "linear"],
@@ -462,7 +491,7 @@ def plot_stack_fit_residual(
     ],
     xlabel: Union[str, List[str]] = "X",
     ylabel: Union[str, List[str]] = "Y",
-    fit_mask: Optional[NDArray] = None,
+    fit_mask: Optional[np.ndarray] = None,
     alpha: float = 0.15,
 ) -> List[Axes]:
     """
@@ -500,7 +529,7 @@ def plot_stack_fit_residual(
 
 
 def plot_residuals(
-    data: List[NDArray],
+    data: List[np.ndarray],
     axes: Optional[List[Axes]] = None,
     norm: Union[str, List[str]] = "linear",
     vmin: Union[float, List[float]] = -10,
@@ -554,8 +583,8 @@ def plot_residuals(
 
 
 def plot_line(
-    x: List[Union[NDArray, List[float]]],
-    y: List[Union[NDArray, List[float]]],
+    x: List[Union[np.ndarray, List[float]]],
+    y: List[Union[np.ndarray, List[float]]],
     ax: Optional[Axes] = None,
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
@@ -638,8 +667,8 @@ def plot_line(
 
 
 def plot_profile_2c(
-    x: List[Union[NDArray, List[float]]],
-    y: List[Union[NDArray, List[float]]],
+    x: List[Union[np.ndarray, List[float]]],
+    y: List[Union[np.ndarray, List[float]]],
     cut: int = 2,
     axes: Optional[List[Axes]] = None,
     text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
@@ -769,8 +798,8 @@ def plot_profile_2c(
 
 
 def plot_profile_2r(
-    x: List[List[Union[NDArray, List[float]]]],
-    y: List[List[Union[NDArray, List[float]]]],
+    x: List[List[Union[np.ndarray, List[float]]]],
+    y: List[List[Union[np.ndarray, List[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], List[Axes], None] = None,
     text_pos: List[List[float]] = [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]],
@@ -917,8 +946,8 @@ def plot_profile_2r(
 
 
 def plot_profile_2c2r(
-    x: List[List[Union[NDArray, List[float]]]],
-    y: List[List[Union[NDArray, List[float]]]],
+    x: List[List[Union[np.ndarray, List[float]]]],
+    y: List[List[Union[np.ndarray, List[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], None] = None,
     text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
@@ -1032,7 +1061,7 @@ def plot_profile_2c2r(
 
 
 def plot_hist(
-    data: List[NDArray],
+    data: List[np.ndarray],
     bins: Union[int, Sequence[float], str, None, list] = None,
     ax: Optional[Axes] = None,
     label: Union[str, list, None] = None,
@@ -1099,7 +1128,7 @@ def plot_hist(
 
 
 def plot_hist_2c(
-    data: List[NDArray],
+    data: List[np.ndarray],
     bins: Union[int, Sequence[float], str, None, list] = None,
     cut: int = 1,
     axes: Optional[List[Axes]] = None,
@@ -1166,7 +1195,7 @@ def plot_hist_2c(
 
 
 def plot_hist_result(
-    data: List[NDArray],
+    data: List[np.ndarray],
     bins: Union[int, Sequence[float], str, None, list] = None,
     cut: int = 4,
     axes: Optional[List[Axes]] = None,

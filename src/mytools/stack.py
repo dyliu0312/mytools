@@ -4,11 +4,12 @@ Functions used to stack galaxy-pairs signal.
 """
 
 import numpy as np
+from typing import Tuple, List
 
 
 def get_projection_lengths(
-    p1: list, p2: list, shape: tuple[int, int], scale: bool = True
-) -> tuple[np.ndarray, np.ndarray]:
+    p1: list, p2: list, shape: Tuple[int, int], scale: bool = True
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     get horizontal and vertical projection lengths for each grid of data, using p2 -p1 as unit vector.
 
@@ -51,7 +52,7 @@ def get_projection_lengths(
 
 
 def hist_data_2d(
-    mask_data: np.ma.masked_array, h: np.ndarray, v: np.ndarray, histbins: tuple[list]
+    mask_data: np.ma.masked_array, h: np.ndarray, v: np.ndarray, histbins: Tuple[list]
 ) -> np.ma.masked_array:
     """
     using histogram2d to rotate and rescale the 2d data.
@@ -93,7 +94,7 @@ def hist_data_2d(
 
 
 def hist_data_3d(
-    mask_data: np.ma.masked_array, p1: list, p2: list, hist_bins: tuple[list[float]]
+    mask_data: np.ma.masked_array, p1: list, p2: list, hist_bins: Tuple[List[float]]
 ) -> np.ma.masked_array:
     """
     For each frequency slices, use histogram2d to rotate and rescale it.
@@ -134,7 +135,7 @@ def hist_data_3d(
 
 def cut_freq(
     freqs: np.ndarray, flags: np.ndarray, is_pro_ra: bool, freq_min: int, freq_max: int
-) -> tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     cut frequency slices outside the range, and flags
 
