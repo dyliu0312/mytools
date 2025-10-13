@@ -1,2 +1,34 @@
 [build-system]
-requires = ["setuptools","wheel"]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mytools"
+version = "0.1.0"
+description = "A collection of python tools used in my HI filament stacking simulation work, arxiv:2411.03988."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "astropy",
+    "h5py",
+    "tqdm",
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+homepage = "https://github.com/dyliu/mytools"
+
+[tool.setuptools.packages.find]
+where = ["src"]

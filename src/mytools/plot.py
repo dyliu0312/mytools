@@ -37,14 +37,15 @@ def arg_list(arg: Any, n: int = 1, m: Optional[int] = None) -> List[Any]:
 
     return arg
 
-def get_minmax(data, q: float = 5)-> Tuple[float, float]:
+
+def get_minmax(data, q: float = 5) -> Tuple[float, float]:
     """
     get the min and max of data with percentile.
     """
     if isinstance(data, np.ma.MaskedArray):
         data = data.compressed()
 
-    return np.percentile(data, [q, 100 - q]) # type: ignore
+    return np.percentile(data, [q, 100 - q])  # type: ignore
 
 
 def get_ticks_labels(
@@ -96,7 +97,7 @@ def set_ticks(
         default_kwargs = dict(ticks=[20, 60, 100], shape=121, lim=(-3, 3), digits=0)
         if kw_get_ticks is not None:
             default_kwargs.update(kw_get_ticks)
-        xticks, xticklabels = get_ticks_labels(**default_kwargs) # type: ignore
+        xticks, xticklabels = get_ticks_labels(**default_kwargs)  # type: ignore
 
     if xticks is not None:
         ax.set_xticks(xticks, xticklabels, **kargs)
@@ -110,7 +111,7 @@ def set_ticks(
 
 def get_colorbar_cax(
     ax: Axes,
-    loc: Literal['right', 'top', 'bottom'] = "right",
+    loc: Literal["right", "top", "bottom"] = "right",
     w_pad: float = 0.01,
     w_factor: float = 0.05,
     h_pad: float = 0.01,
@@ -219,10 +220,10 @@ def plot_heatmap(
     show_cbar: bool = True,
     cbar_ax: Optional[Axes] = None,
     cbar_loc: Literal["right", "top", "bottom"] = "right",
-    cbar_label: Optional[str] = r'T[$\mu$K]',
-    title: Optional[str] = 'Heatmap',
-    xlabel: Optional[str] = 'X',
-    ylabel: Optional[str] = 'Y',
+    cbar_label: Optional[str] = r"T[$\mu$K]",
+    title: Optional[str] = "Heatmap",
+    xlabel: Optional[str] = "X",
+    ylabel: Optional[str] = "Y",
     change_ticks: bool = True,
     kw_makefigure: Optional[dict] = None,
     kw_pcolormesh: Optional[dict] = None,
@@ -331,10 +332,13 @@ def plot_heatmap(
             cb.ax.tick_params(axis="both", direction="in")
 
     if change_ticks:
-        kw_set_ticks = dict(share=True, kw_get_ticks = dict(ticks=[20, 60, 100], shape=121, lim=(-3, 3), digits=0))
+        kw_set_ticks = dict(
+            share=True,
+            kw_get_ticks=dict(ticks=[20, 60, 100], shape=121, lim=(-3, 3), digits=0),
+        )
         if kw_ticks is not None:
             kw_set_ticks.update(kw_ticks)
-        set_ticks(ax, **kw_set_ticks) # type: ignore
+        set_ticks(ax, **kw_set_ticks)  # type: ignore
     return ax
 
 
@@ -349,7 +353,7 @@ def plot_heatmaps(
     tick_in: bool = True,
     show_cbar: Union[bool, List[bool]] = True,
     cbar_loc: Literal["right", "top", "bottom"] = "right",
-    cbar_label: Union[str, List[str], None] = r'T[$\mu$K]',
+    cbar_label: Union[str, List[str], None] = r"T[$\mu$K]",
     title: Union[str, List[str], None] = None,
     xlabel: Union[str, List[str]] = "X",
     ylabel: Union[str, List[str]] = "Y",
@@ -561,7 +565,7 @@ def plot_line(
     linestyle: Union[str, List[str], List[Union[str, None]], List[None], None] = None,
     label: Union[str, List[str], List[Union[str, None]], List[None], None] = None,
     tick_in: bool = True,
-    **kwargs
+    **kwargs,
 ) -> Axes:
     """
     plot a line or lines.
@@ -603,7 +607,7 @@ def plot_line(
                 linestyle=linestyles[i],
                 marker=markers[i],
                 label=la,
-                **kwargs
+                **kwargs,
             )
     if any(la is not None for la in labels):
         ax.legend()
@@ -618,7 +622,7 @@ def plot_line(
                 color=colors[i],
                 linestyle=linestyles[i],
                 marker=markers[i],
-                **kwargs
+                **kwargs,
             )
 
     if xlabel is not None:
@@ -836,9 +840,9 @@ def plot_profile_2r(
     width = arg_list(width, ncol)
 
     # check xlabels
-    xlabel = arg_list(xlabel, nrow*ncol)
-    ylabel = arg_list(ylabel, nrow*ncol)
-    title = arg_list(title, nrow*ncol)
+    xlabel = arg_list(xlabel, nrow * ncol)
+    ylabel = arg_list(ylabel, nrow * ncol)
+    title = arg_list(title, nrow * ncol)
 
     for i in range(ncol):
         st, ed = i * nline, (i + 1) * nline
@@ -993,7 +997,7 @@ def plot_profile_2c2r(
     marker = arg_list(marker, nline, nrow)
     linestyle = arg_list(linestyle, nline, nrow)
 
-    label = arg_list(label, nline*nrow)
+    label = arg_list(label, nline * nrow)
 
     # check text parameters
     text_pos = arg_list(text_pos, ntext, nrow)
@@ -1003,7 +1007,7 @@ def plot_profile_2c2r(
     # check xlabels
     xlabel = arg_list(xlabel, ncol, nrow)
     ylabel = arg_list(ylabel, ncol, nrow)
-    title = arg_list(title, ncol*nrow)
+    title = arg_list(title, ncol * nrow)
 
     for i in range(nrow):
         plot_profile_2c(
@@ -1337,14 +1341,15 @@ def plot_sector(
                 **kwargs,
             )
 
+
 def plot_axlines(
-    ax: Union[Axes, Sequence[Axes], np.ndarray], 
+    ax: Union[Axes, Sequence[Axes], np.ndarray],
     vl: Union[float, Iterable[float], None] = None,
     hl: Union[float, Iterable[float], None] = None,
     color: str = "r",
     linestyle: str = "--",
     linewidth: float = 1,
-    alpha : float = 1,
+    alpha: float = 1,
     zorder: float = 1,
     **kwargs,
 ) -> None:
@@ -1362,7 +1367,7 @@ def plot_axlines(
         zorder (float): zorder of the lines.
         **kwargs: additional keyword arguments.
     """
-    
+
     line_kwargs = dict(
         color=color,
         linestyle=linestyle,
@@ -1372,7 +1377,7 @@ def plot_axlines(
     )
     if kwargs is not None:
         line_kwargs.update(kwargs)
-    
+
     if isinstance(ax, np.ndarray):
         axes = ax.flatten()
     else:
@@ -1382,30 +1387,29 @@ def plot_axlines(
         # Vertical lines
         if vl is not None:
             if isinstance(vl, (int, float)):
-                current_ax.axvline(x=vl, **line_kwargs) # type: ignore
+                current_ax.axvline(x=vl, **line_kwargs)  # type: ignore
             elif isinstance(vl, Iterable):
                 for x in vl:
-                    current_ax.axvline(x=x, **line_kwargs) # type: ignore
-        
+                    current_ax.axvline(x=x, **line_kwargs)  # type: ignore
+
         # Horizontal lines
         if hl is not None:
             if isinstance(hl, (int, float)):
-                current_ax.axhline(y=hl, **line_kwargs) # type: ignore
+                current_ax.axhline(y=hl, **line_kwargs)  # type: ignore
             elif isinstance(hl, Iterable):
                 for y in hl:
-                    current_ax.axhline(y=y, **line_kwargs) # type: ignore
+                    current_ax.axhline(y=y, **line_kwargs)  # type: ignore
     return None
 
 
 def save_plot(
-    plot_obj: Union[Figure, Axes, Sequence[Axes], np.ndarray], 
-    filename: str, 
-    dpi: int = 100, 
-    bbox_inches: str = 'tight', 
+    plot_obj: Union[Figure, Axes, Sequence[Axes], np.ndarray],
+    filename: str,
+    dpi: int = 100,
+    bbox_inches: str = "tight",
     pad_inches: float = 0.1,
-    **kwargs
+    **kwargs,
 ) -> None:
-
     if isinstance(plot_obj, Figure):
         fig = plot_obj
     elif isinstance(plot_obj, Axes):
@@ -1416,7 +1420,7 @@ def save_plot(
             fig = first_ax.figure
         else:
             raise ValueError("The first element of the plot_obj is not an Axes object")
-    elif isinstance(plot_obj, np.ndarray): # Assuming plot_obj is a numpy array
+    elif isinstance(plot_obj, np.ndarray):  # Assuming plot_obj is a numpy array
         if plot_obj.size == 0:
             raise ValueError("Axes array is empty")
         flat_array = plot_obj.flat
@@ -1427,14 +1431,10 @@ def save_plot(
     else:
         raise TypeError(f"Unsupported type for plot_obj: {type(plot_obj)}")
 
-    fig.savefig( # type: ignore
-        filename, 
-        dpi=dpi, 
-        bbox_inches=bbox_inches, 
-        pad_inches=pad_inches,
-        **kwargs
+    fig.savefig(  # type: ignore
+        filename, dpi=dpi, bbox_inches=bbox_inches, pad_inches=pad_inches, **kwargs
     )
-    
+
     print(f"Plot saved to {filename}")
-    
+
     return None

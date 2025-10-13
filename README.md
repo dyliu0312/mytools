@@ -27,7 +27,6 @@ It was tested on Python>=3.8, and requires the following packages:
 * [astropy](https://www.astropy.org/)
 * [scipy](https://scipy.org/)
 
-## Note:
 Python3.8 does not support str input for *norm* args. 
 So use Python version: **Python>=3.9**.
 
@@ -39,11 +38,15 @@ After installing, you can use the functions in the modules, for example:
 from mytools.calculation import freq2z, u
 freq2z(1.3*u.GHz)
 ```
-
+## Note:
 The example Jupyter notebooks are in the [test](test) folder.
 
 
 **If you want to run the ```stack_pair.py``` script, please see and modify the example parameters set in the [stack_pair.sh](slurm/stack_pair.sh) file.**
+
+Have fun!
+
+![Smile](test/example.png)
 
 
 

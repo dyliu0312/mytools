@@ -192,7 +192,7 @@ def stack_run(
     split_size=500,
     nworker=24,
     random_flip=True,
-    savekeys=["Signal", "Mask"]
+    savekeys=["Signal", "Mask"],
 ):
     """
     split data to stack and save seprately.
@@ -248,7 +248,9 @@ if __name__ == "__main__":
         if OUTPUT_STACK_PREFIX is None:
             raise ValueError("Environment variable 'OUTPUT_STACK_PREFIX' is not set.")
 
-        OUTPUT_STACK_DATA_KEYS = os.getenv("OUTPUT_STACK_KEYS", "Signal,Mask").split(",")
+        OUTPUT_STACK_DATA_KEYS = os.getenv("OUTPUT_STACK_KEYS", "Signal,Mask").split(
+            ","
+        )
         if len(OUTPUT_STACK_DATA_KEYS) != 2:
             raise ValueError(
                 "Environment variable 'OUTPUT_STACK_KEYS' must contain exactly two keys."
