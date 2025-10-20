@@ -19,7 +19,24 @@ from mytools.constant import (
     u,
 )
 
+def freq2wave(freq, unit_freq=u.GHz, unit_wave=u.cm):
+    """
+    turn frequency into wavelength.
+    """
+    if not isinstance(freq, u.Quantity):
+        freq = u.Quantity(freq, unit_freq)
+        
+    return freq.to(unit_wave, equivalencies=u.spectral())
 
+def wave2freq(wave, unit_wave=u.cm, unit_freq=u.GHz):
+    """
+    turn wavelength into frequency.
+    """
+    if not isinstance(wave, u.Quantity):
+        wave = u.Quantity(wave, unit_wave)
+
+    return wave.to(unit_freq, equivalencies=u.spectral())
+    
 def dv2df(dv, z=None, freq=HI_restfreq):
     """
     Turn velocity width into frequency width.
