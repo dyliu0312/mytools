@@ -193,6 +193,7 @@ def stack_run(
     nworker=24,
     random_flip=True,
     savekeys=["Signal", "Mask"],
+    compression="gzip",
 ):
     """
     split data to stack and save seprately.
@@ -214,7 +215,7 @@ def stack_run(
 
         # save result
         groupname = str(split_size) + "_" + str(i)
-        save_h5(output, savekeys, [s.data, s.mask], groupname)
+        save_h5(output, savekeys, [s.data, s.mask], groupname, compression=compression)
 
 
 if __name__ == "__main__":
@@ -444,7 +445,7 @@ if __name__ == "__main__":
                 map_array, mask=map_array == 0, dtype=np.float32
             )
             print("Masked map with zeros.")
-        print(f"Loaded map from {map_path} with shape {map_array.shape}")
+        print(f"Loaded map from {map_path} with shape {map_array.shape}") # type: ignore
     except Exception as e:
         print(f"Failed to load map data from {map_path}: {e}", file=sys.stderr)
         sys.exit(1)
