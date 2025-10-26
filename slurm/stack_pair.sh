@@ -13,22 +13,26 @@ pwd; hostname; date
 
 echo "Running prime number generator program on $SLURM_CPUS_ON_NODE CPU cores"
 
-############## Notes ################
-# This is a EXAMPLE slurm script for running stack_pair.py, remember to change the paths and parameters to your own.
-#####################################
+###################### Notes ########################
+## EXAMPLE slurm script for running stack_pair.py. ##
+#####################################################
 
 module load openmpi/4.1.4 anaconda/3.9
 
 # --- Script Configuration ---
 
 # Stacking parameters
-export NFS=35             # Number of frequency slices to extract, equivalent to a frequency width:  2*NFS+1 * freq_resolution
-export NWORKER=72         # Number of workers for multiprocessing (should be <= --cpus-per-task)
-export SSIZE=500          # Split size for pair catalog processing, results in the same split will be stacked together.
-export RANDOM_FLIP="True" # Randomly flip individual pair map (True/False)
-export HALFWIDTH="3.0"    # Stack result map half-width
-export NPIX_X="120"       # Stack result map X pixels
-export NPIX_Y="120"       # Stack result map Y pixels
+export NFS=35                   # Number of frequency slices to extract, equivalent to a frequency width:  2*NFS+1 * freq_resolution
+export NWORKER=72               # Number of workers for multiprocessing (should be <= --cpus-per-task)
+export SSIZE=500                # Split size for pair catalog processing, results in the same split will be stacked together.
+export RANDOM_FLIP="True"       # Randomly flip individual pair map (True/False)
+export HALFWIDTH="3.0"          # Stack result map half-width
+export NPIX_X="120"             # Stack result map X pixels
+export NPIX_Y="120"             # Stack result map Y pixels
+# export SAVEKEYS="Signal,Mask"   # Datasets to save in the output file
+# export COMPRESSION="gzip"       # Compression method for the output file (gzip/lz4)
+# export SKIP_EXIST="False"       # Skip existing output files (True/False)
+# export STACK_PIX_COUNT='False'  # Stack pixel count instead of map values by making all values to 1.0 (True/False)
 
 # Define base paths and prefixes
 export INPUT_MAP_BASE="/home/dyliu/data/"

@@ -7,9 +7,8 @@ import multiprocessing as mp
 import os
 import sys
 
+import h5py as h5
 import numpy as np
-from tqdm import tqdm
-
 from mytools.bins import (  # type: ignore
     get_ids_edge,
     set_resbins,
@@ -24,6 +23,7 @@ from mytools.stack import (  # type: ignore
     cut_freq,
     hist_data_3d,
 )
+from tqdm import tqdm
 
 
 def join_path(base, prefix, extension=".h5"):
@@ -194,10 +194,41 @@ def stack_run(
     random_flip=True,
     savekeys=["Signal", "Mask"],
     compression="gzip",
+    skip_exist=True,
 ):
     """
     split data to stack and save seprately.
 
+    Parameters
+    ----------
+    output : str
+        output file name
+    pair_catalog : list
+        list of pair catalog
+    is_pro_ra : list
+        list of bool, indicating if the pair stacking is gona projection along ra (i.e. ra longer than dec)
+    map_bins : list
+        list of edge bins of the map (ra, dec, freq)
+    hist_bins : list
+        list of center bins of the histogram (ra, dec, freq)
+    nfreqslice : int
+        number of frequency slice to extract during stack
+    split_size : int, optional
+        number of pairs to process in one split, by default 500
+    nworker : int, optional
+        number of workers to use, by default 24
+    random_flip : bool, optional
+        if random flip the signal of pairs, by default True
+    savekeys : list, optional
+        list of keys of output dataset to save, by default ["Signal", "Mask"]
+    compression : str, optional
+        compression method of h5 file, by default "gzip"
+    skip_exist : bool, optional
+        if skip the split that already exist in the output file, by default True
+
+    Returns
+    -------
+    None
     """
 
     # splite data for multiprocessing
@@ -208,13 +239,29 @@ def stack_run(
         desc="Processing splits",
     )
 
+    if skip_exist:
+        print('--- skip_exist enabled, checking existing results ---')
+        if is_exist(output):
+            with h5.File(output, "r") as f:
+                exist_keys = [i for i in f.keys()]
+            if exist_keys == []:
+                skip_exist = False
+                print('--- No existing result found, disable skipping ---')
+            else:
+                print('--- Found existing result in output file, enable skipping ---') 
+        else:
+            skip_exist=False
+            print('--- Output file not found, disable skipping ---')
+
     for i, (ipair, ipra) in pbar:
         pbar.set_postfix({"split": f"{i}"})
+        groupname = str(split_size) + "_" + str(i)
+        if skip_exist and groupname in exist_keys: # type: ignore
+            continue
 
         s = stack_mp(nworker, ipair, ipra, map_bins, nfreqslice, hist_bins, random_flip)
 
         # save result
-        groupname = str(split_size) + "_" + str(i)
         save_h5(output, savekeys, [s.data, s.mask], groupname, compression=compression)
 
 
@@ -271,10 +318,7 @@ if __name__ == "__main__":
         SSIZE = int(SSIZE_STR)
 
         # Optional parameters with default values
-        INPUT_MAP_MASKED = os.getenv("INPUT_MAP_MASKED", "True").lower() in [
-            "true",
-            "1",
-        ]
+        INPUT_MAP_MASKED = os.getenv("INPUT_MAP_MASKED", "True").lower() == "true"
         INPUT_MAP_KEYS = os.getenv(
             "INPUT_MAP_KEYS", "T,mask,f_bin_edge,x_bin_edge,y_bin_edge"
         ).split(",")
@@ -304,6 +348,30 @@ if __name__ == "__main__":
         NPIX_Y_STR = os.getenv("NPIX_Y", "120")
         NPIX_Y = int(NPIX_Y_STR)
 
+        # stack pixel count instead of map values
+        STACK_PIX_COUNT = os.getenv("STACK_PIX_COUNT", "False")
+        if STACK_PIX_COUNT.lower() == "true":
+            STACK_PIX_COUNT = True
+            print(
+                "┌" + "-" * 67 + "┐",
+                "│" + " " * 30 + "WARNING" + " " * 30 + "│",
+                "├" + "-" * 67 + "┤",
+                "│ This job is currently stacking pixel count instead of map values. │",
+                "│                                                                   │",
+                "│ To stack map values instead, set STACK_PIX_COUNT = False.         │",
+                "└" + "-" * 67 + "┘",
+                sep="\n",
+            )
+        else:
+            STACK_PIX_COUNT = False
+
+        # skip existing stacks
+        SKIP_EXIST = os.getenv("SKIP_EXIST", "False")
+        SKIP_EXIST = SKIP_EXIST.lower() == "true"
+
+        # compression
+        COMPRESSION = os.getenv("COMPRESSION", "gzip")
+
     except ValueError as e:
         print(f"Configuration Error: {e}", file=sys.stderr)
         print("\nPlease set the following environment variables:", file=sys.stderr)
@@ -317,6 +385,12 @@ if __name__ == "__main__":
         print("    NFS                  (e.g., '10')", file=sys.stderr)
         print("    SSIZE                (e.g., '1000')", file=sys.stderr)
         print("  Optional:", file=sys.stderr)
+        print("    COMPRESSION          (e.g., 'gzip' or 'lzf', default 'gzip')")
+        print("    SKIP_EXIST           (e.g., 'True' or 'False', default 'False')")
+        print(
+            "    STACK_PIX_COUNT      (e.g., 'True' or 'False', default 'False')",
+            file=sys.stderr,
+        )
         print(
             "    INPUT_MAP_MASK       (e.g., 'True' or 'False', default 'True')",
             file=sys.stderr,
@@ -366,14 +440,34 @@ if __name__ == "__main__":
             file=sys.stderr,
         )
         sys.exit(1)
-
+    
     # --- Validate Output Path (Check if already exists, prevent overwrite) ---
     if is_exist(output_path):
-        print(
-            f"Error: Output file '{output_path}' already exists. Please choose a different path or delete the existing file. Exiting.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        if SKIP_EXIST:
+            print(
+                "┌" + "-" * 62 + "┐",
+                "│" + " " * 27 + "WARNING" + " " * 28 + "│",
+                "├" + "-" * 62 + "┤",
+                "| This job is currently trying to add new stacking results to  |",
+                "| the output file that already exists.                         |",
+                "└" + "-" * 62 + "┘",
+                sep="\n",
+            )
+        else:
+            print(
+                "┌" + "-" * 62 + "┐",
+                "│" + " " * 28 + "ERROR" + " " * 29 + "│",
+                "├" + "-" * 62 + "┤",
+                "| Output file already exists. To prevent accidental overwrite, |",
+                "| this operation has been stopped.                             |",
+                "|" + " " * 62 + "|",
+                "| If you want to add new results to the existing file, instead |",
+                "| of creating a new one, please set SKIP_EXIST = True.         |",
+                "└" + "-" * 62 + "┘",
+                sep="\n",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     # --- Print loaded configuration ---
     print("Processing with the following configuration:")
@@ -387,6 +481,11 @@ if __name__ == "__main__":
     print(f" NWORKER (number of workers): {NWORKER}")
     print(f" SSIZE (catalog split size for processing): {SSIZE}")
     print(f" RANDOM_FLIP (randomly flip individual pair map): {RANDOM_FLIP}")
+    print(f" COMPRESSION (compression method): {COMPRESSION}")
+    print(f" SKIP_EXIST (skip existing stacks): {SKIP_EXIST}")
+    print(
+        f" STACK_PIX_COUNT (stack pixel counts instead of map values): {STACK_PIX_COUNT}"
+    )
     print(f" HALFWIDTH (stack result map half-width): {HALFWIDTH}")
     print(f" NPIX_X (stack result map X pixels): {NPIX_X}")
     print(f" NPIX_Y (stack result map Y pixels): {NPIX_Y}")
@@ -445,10 +544,16 @@ if __name__ == "__main__":
                 map_array, mask=map_array == 0, dtype=np.float32
             )
             print("Masked map with zeros.")
-        print(f"Loaded map from {map_path} with shape {map_array.shape}") # type: ignore
+        print(f"Loaded map from {map_path} with shape {map_array.shape}")  # type: ignore
     except Exception as e:
         print(f"Failed to load map data from {map_path}: {e}", file=sys.stderr)
         sys.exit(1)
+
+    ## convert to pix count
+    if STACK_PIX_COUNT:
+        print("\nConverting map to pixel counts.")
+        mask_map = mask_map != 0
+        mask_map = mask_map.astype(np.float32)
 
     # Calculate resbins based on default args or env vars
     resbins = set_resbins(HALFWIDTH, NPIX_X, NPIX_Y, 2)
@@ -466,6 +571,8 @@ if __name__ == "__main__":
         nworker=NWORKER,
         random_flip=RANDOM_FLIP,
         savekeys=OUTPUT_STACK_DATA_KEYS,
+        compression=COMPRESSION,
+        skip_exist=SKIP_EXIST,
     )
 
     gc.collect()  # Trigger garbage collection
