@@ -1,5 +1,5 @@
 """
-tools for data process.
+tools for HDF5 data manipulation.
 
 """
 
