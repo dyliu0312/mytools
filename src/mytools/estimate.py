@@ -236,7 +236,7 @@ def get_signal_level(
     tbg = np.mean(clrb[-1], axis=0)
 
     # get the x axis
-    xx = np.linspace(*x_range, x_num)
+    xx = np.linspace(*x_range, x_num) # type: ignore
 
     # create the line data
     line_x = [yy, yy, xx, xx]

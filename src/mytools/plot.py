@@ -482,7 +482,7 @@ def plot_stack_fit_res(
     data: List[np.ndarray],
     axes: Optional[List[Axes]] = None,
     cmap: Union[str, List[str]] = ["viridis", "viridis", "RdBu_r"],
-    norm: Union[str, List[str]] = ["symlog", "symlog", "linear"],
+    norm: Union[str, List[str]] = "linear",
     vmin: Union[float, List[float], None] = None,
     vmax: Union[float, List[float], None] = None,
     q: float = 5,

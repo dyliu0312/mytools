@@ -56,7 +56,7 @@ def is_exist(file_path: str) -> bool:
 
 
 # --- hdf5 file ---
-def info_h5_item(name: str, item: Any):
+def info_items(name: str, item: Any):
     """
     Prints detailed information (type, shape, dtype, and all attributes) for a 
     Group or Dataset object encountered during h5py.File.visititems().
@@ -106,7 +106,7 @@ def info_h5_item(name: str, item: Any):
     else:
         print(" None")
         
-def visititems_h5(file_path: str, func: Callable = info_h5_item):
+def vitems(file_path: str, func: Callable = info_items):
     """
     Recursively visit the group and dataset information in an HDF5 file using the visititems() method.
 
@@ -136,7 +136,7 @@ def del_data(file_path: str, key: str):
         del f[key]
 
 
-def print_dataset_attrs(dataset):
+def print_dset_attrs(dataset):
     """
     Prints the attributes of a given dataset if any exist.
     """
@@ -183,7 +183,7 @@ def read_h5(
             else:
                 dataset = obj[()]  # type: ignore
             if print_attrs:
-                print_dataset_attrs(obj)
+                print_dset_attrs(obj)
             return dataset
 
         # If a single key is provided, return the corresponding data
@@ -226,7 +226,7 @@ def save_h5(
             f.create_dataset(dataset_path, data=d, **kwargs)
 
 
-def save_h5_attrs(filepath, file_attrs=None, dataset_attrs=None):
+def save_attrs(filepath, file_attrs=None, dataset_attrs=None):
     """
     Save specified attributes in an HDF5 file, with an option to add dataset-level attributes.
 
@@ -273,7 +273,7 @@ def _decode_attribute_value(value: Any) -> Any:
         return value.astype(str)
     return value
 
-def load_h5_attrs(file_path: str) -> Optional[Dict[str, Any]]:
+def load_attrs(file_path: str) -> Optional[Dict[str, Any]]:
     """
     Load attributes from an HDF5 file, structured to mirror the save_h5_attributes function.
 
@@ -391,6 +391,6 @@ def get_stacked_result(
             s = np.ma.array(si, mask=mi)
             result.append(s)
 
-    visititems_h5(file_path, add_up)
+    vitems(file_path, add_up)
     result_array = np.ma.array(result)
     return result_array.mean(axis=0)
