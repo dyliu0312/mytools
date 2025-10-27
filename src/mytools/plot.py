@@ -238,7 +238,7 @@ def plot_heatmap(
     norm: Union[Literal["linear", "log", "symlog"], Normalize] = "linear",
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
-    q: float = 5,
+    q: Optional[float] = 5,
     tick_in: bool = True,
     show_cbar: bool = True,
     cbar_ax: Optional[Axes] = None,
@@ -307,10 +307,15 @@ def plot_heatmap(
     else:
         raise ValueError("Expected 1-3 arguments: [data], [x, data], or [x, y, data].")
 
+    # if data is boolean array
+    if data.dtype.kind == 'b':
+        q = None # disable percentile calculation
+
     # --- Compute vmin/vmax ---
-    _vmin, _vmax = get_minmax(data, q=q)
-    vmin = _vmin if vmin is None else vmin
-    vmax = _vmax if vmax is None else vmax
+    if q is not None:
+        _vmin, _vmax = get_minmax(data, q=q)
+        vmin = _vmin if vmin is None else vmin
+        vmax = _vmax if vmax is None else vmax
 
     # --- Set norm ---
     if isinstance(norm, str):
@@ -473,7 +478,7 @@ def plot_heatmaps(
     return axes
 
 
-def plot_stack_fit_residual(
+def plot_stack_fit_res(
     data: List[np.ndarray],
     axes: Optional[List[Axes]] = None,
     cmap: Union[str, List[str]] = ["viridis", "viridis", "RdBu_r"],
@@ -528,7 +533,7 @@ def plot_stack_fit_residual(
     return axes
 
 
-def plot_residuals(
+def plot_res(
     data: List[np.ndarray],
     axes: Optional[List[Axes]] = None,
     norm: Union[str, List[str]] = "linear",
