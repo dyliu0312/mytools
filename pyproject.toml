@@ -15,7 +15,6 @@ dependencies = [
     "matplotlib",
     "astropy",
     "h5py",
-    "tqdm",
 ]
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -30,6 +29,17 @@ classifiers = [
 
 [project.urls]
 homepage = "https://github.com/dyliu0312/mytools"
+
+[tool.uv.sources]
+illustris-python = { git = "https://github.com/illustristng/illustris_python.git" }
+
+[project.optional-dependencies]
+stack = [
+    "tqdm",
+]
+prepare = [
+    "illustris-python",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
