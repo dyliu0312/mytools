@@ -1,5 +1,5 @@
 """
-main script to finish stacking process.
+main script to finish galaxy pairwise stacking process.
 """
 
 import gc

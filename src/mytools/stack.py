@@ -125,7 +125,7 @@ def hist_data_3d(
 
     if trip:
         signals = np.ma.array(
-            [hist_data_2d(mask_data[i, :, :], h, v, hist_bins) for i in range(nf)]
+            [hist_data_2d(mask_data[i, :, :], h, v, hist_bins) for i in range(nf)] # type: ignore
         )
     else:
         signals = hist_data_2d(mask_data, h, v, hist_bins)

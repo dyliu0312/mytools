@@ -1,20 +1,20 @@
 #!/bin/bash
 
-#SBATCH --job-name=stack              # Job name
-#SBATCH --nodelist=node02             # Run all processes on a single node
-#SBATCH --ntasks=1                    # Run a single task
-#SBATCH --cpus-per-task=72            # Number of CPU cores per task
-#SBATCH --mem=20gb                    # Job memory request
-#SBATCH --time=72:00:00               # Time limit hrs:min:sec
-#SBATCH --partition=batch             # Partition name
-#SBATCH --output=stack_pair_%j.log    # Standard output and error log
+#SBATCH --job-name=stack                  # Job name
+#SBATCH --nodelist=node02                 # Run all processes on a single node
+#SBATCH --ntasks=1                        # Run a single task
+#SBATCH --cpus-per-task=72                # Number of CPU cores per task
+#SBATCH --mem=20gb                        # Job memory request
+#SBATCH --time=72:00:00                   # Time limit hrs:min:sec
+#SBATCH --partition=batch                 # Partition name
+#SBATCH --output=log_stack_pair_%j.log    # Standard output and error log
 
 pwd; hostname; date
 
 echo "Running prime number generator program on $SLURM_CPUS_ON_NODE CPU cores"
 
 ###################### Notes ########################
-## EXAMPLE slurm script for running stack_pair.py. ##
+## EXAMPLE slurm script for running pair_stack.py. ##
 #####################################################
 
 module load openmpi/4.1.4 anaconda/3.9
@@ -44,10 +44,10 @@ export INPUT_PAIRCAT_BASE="/home/dyliu/data/sdss_catalog/"
 export INPUT_PAIRCAT_PREFIX="pair_catalog"
 export INPUT_PAIRCAT_KEYS='is_ra,pos'
  
-export OUTPUT_STACK_BASE="/home/dyliu/data/galaxy_stack_pair/"
+export OUTPUT_STACK_BASE="/home/dyliu/data/galaxy_pair_stack/"
 export OUTPUT_STACK_PREFIX="stack_result_nfs"$NFS
 
 # Run the Python script
-python /home/dyliu/mytools/bin/stack_pair.py
+python /home/dyliu/mytools/scripts/pair_stack.py
     
 date
