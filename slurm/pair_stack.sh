@@ -32,7 +32,6 @@ export NPIX_Y="120"             # Stack result map Y pixels
 # export SAVEKEYS="Signal,Mask"   # Datasets to save in the output file
 # export COMPRESSION="gzip"       # Compression method for the output file (gzip/lz4)
 # export SKIP_EXIST="False"       # Skip existing output files (True/False)
-# export STACK_PIX_COUNT='False'  # Stack pixel count instead of map values by making all values to 1.0 (True/False)
 
 # Define base paths and prefixes
 export INPUT_MAP_BASE="/home/dyliu/data/"
@@ -43,11 +42,11 @@ export INPUT_MAP_MASKED="True"    # True to read 'mask' dataset in the input map
 export INPUT_PAIRCAT_BASE="/home/dyliu/data/sdss_catalog/"
 export INPUT_PAIRCAT_PREFIX="pair_catalog"
 export INPUT_PAIRCAT_KEYS='is_ra,pos'
- 
+
 export OUTPUT_STACK_BASE="/home/dyliu/data/galaxy_pair_stack/"
 export OUTPUT_STACK_PREFIX="stack_result_nfs"$NFS
 
 # Run the Python script
 python /home/dyliu/mytools/scripts/pair_stack.py
-    
+
 date

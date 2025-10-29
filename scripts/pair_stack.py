@@ -6,6 +6,7 @@ import gc
 import multiprocessing as mp
 import os
 import sys
+from typing import List, Sequence  # pyright: ignore[reportDeprecated]
 
 import h5py as h5
 import numpy as np
@@ -26,7 +27,7 @@ from mytools.stack import (  # type: ignore
 from tqdm import tqdm
 
 
-def join_path(base, prefix, extension=".h5"):
+def join_path(base: str, prefix: str, extension: str = ".h5") -> str:
     # Ensure extension starts with a dot
     if not extension.startswith("."):
         extension = "." + extension
@@ -184,17 +185,17 @@ def stack_mp(
 
 def stack_run(
     output: str,
-    pair_catalog,
-    is_pro_ra,
-    map_bins,
-    hist_bins,
-    nfreqslice,
-    split_size=500,
-    nworker=24,
-    random_flip=True,
-    savekeys=["Signal", "Mask"],
-    compression="gzip",
-    skip_exist=True,
+    pair_catalog: np.ndarray,
+    is_pro_ra: np.ndarray,
+    map_bins: Sequence[np.ndarray],
+    hist_bins: Sequence[np.ndarray],
+    nfreqslice: int,
+    split_size: int = 500,
+    nworker: int = 24,
+    random_flip: bool = True,
+    savekeys: List[str] = ["Signal", "Mask"],
+    compression: str = "gzip",
+    skip_exist: bool = True,
 ):
     """
     split data to stack and save seprately.
@@ -203,14 +204,14 @@ def stack_run(
     ----------
     output : str
         output file name
-    pair_catalog : list
-        list of pair catalog
-    is_pro_ra : list
-        list of bool, indicating if the pair stacking is gona projection along ra (i.e. ra longer than dec)
-    map_bins : list
-        list of edge bins of the map (ra, dec, freq)
-    hist_bins : list
-        list of center bins of the histogram (ra, dec, freq)
+    pair_catalog : np.ndarray
+        pair catalog
+    is_pro_ra : np.ndarray
+        boolean array, indicating if the pair stacking is gona projection along ra (i.e. ra longer than dec)
+    map_bins : list or tuple
+        list of center bins of the map (ra, dec, freq)
+    hist_bins : list or tuple
+        list of center bins of the histogram (x, y)
     nfreqslice : int
         number of frequency slice to extract during stack
     split_size : int, optional
@@ -240,23 +241,23 @@ def stack_run(
     )
 
     if skip_exist:
-        print('--- skip_exist enabled, checking existing results ---')
+        print("--- skip_exist enabled, checking existing results ---")
         if is_exist(output):
             with h5.File(output, "r") as f:
                 exist_keys = [i for i in f.keys()]
             if exist_keys == []:
                 skip_exist = False
-                print('--- No existing result found, disable skipping ---')
+                print("--- No existing result found, disable skipping ---")
             else:
-                print('--- Found existing result in output file, enable skipping ---') 
+                print("--- Found existing result in output file, enable skipping ---")
         else:
-            skip_exist=False
-            print('--- Output file not found, disable skipping ---')
+            skip_exist = False
+            print("--- Output file not found, disable skipping ---")
 
     for i, (ipair, ipra) in pbar:
         pbar.set_postfix({"split": f"{i}"})
         groupname = str(split_size) + "_" + str(i)
-        if skip_exist and groupname in exist_keys: # type: ignore
+        if skip_exist and groupname in exist_keys:  # pyright: ignore[reportPossiblyUnboundVariable]
             continue
 
         s = stack_mp(nworker, ipair, ipra, map_bins, nfreqslice, hist_bins, random_flip)
@@ -326,13 +327,13 @@ if __name__ == "__main__":
 
         NWORKER_STR = os.getenv("NWORKER")
         if NWORKER_STR is None or NWORKER_STR.lower() == "none":
-            NWORKER = mp.cpu_count()
+            nworker = mp.cpu_count()
             print(
-                f"Warning: Environment variable 'NWORKER' not set. Defaulting to {NWORKER} workers.",
+                f"Warning: Environment variable 'NWORKER' not set. Defaulting to {nworker} workers.",
                 file=sys.stderr,
             )
         else:
-            NWORKER = int(NWORKER_STR)
+            nworker = int(NWORKER_STR)
 
         RANDOM_FLIP_STR = os.getenv("RANDOM_FLIP", "True")
         RANDOM_FLIP = RANDOM_FLIP_STR.lower() == "true"
@@ -348,26 +349,9 @@ if __name__ == "__main__":
         NPIX_Y_STR = os.getenv("NPIX_Y", "120")
         NPIX_Y = int(NPIX_Y_STR)
 
-        # stack pixel count instead of map values
-        STACK_PIX_COUNT = os.getenv("STACK_PIX_COUNT", "False")
-        if STACK_PIX_COUNT.lower() == "true":
-            STACK_PIX_COUNT = True
-            print(
-                "┌" + "-" * 67 + "┐",
-                "│" + " " * 30 + "WARNING" + " " * 30 + "│",
-                "├" + "-" * 67 + "┤",
-                "│ This job is currently stacking pixel count instead of map values. │",
-                "│                                                                   │",
-                "│ To stack map values instead, set STACK_PIX_COUNT = False.         │",
-                "└" + "-" * 67 + "┘",
-                sep="\n",
-            )
-        else:
-            STACK_PIX_COUNT = False
-
         # skip existing stacks
-        SKIP_EXIST = os.getenv("SKIP_EXIST", "False")
-        SKIP_EXIST = SKIP_EXIST.lower() == "true"
+        SKIP_EXIST_STR = os.getenv("SKIP_EXIST", "False")
+        SKIP_EXIST = SKIP_EXIST_STR.lower() == "true"
 
         # compression
         COMPRESSION = os.getenv("COMPRESSION", "gzip")
@@ -387,10 +371,6 @@ if __name__ == "__main__":
         print("  Optional:", file=sys.stderr)
         print("    COMPRESSION          (e.g., 'gzip' or 'lzf', default 'gzip')")
         print("    SKIP_EXIST           (e.g., 'True' or 'False', default 'False')")
-        print(
-            "    STACK_PIX_COUNT      (e.g., 'True' or 'False', default 'False')",
-            file=sys.stderr,
-        )
         print(
             "    INPUT_MAP_MASK       (e.g., 'True' or 'False', default 'True')",
             file=sys.stderr,
@@ -440,7 +420,7 @@ if __name__ == "__main__":
             file=sys.stderr,
         )
         sys.exit(1)
-    
+
     # --- Validate Output Path (Check if already exists, prevent overwrite) ---
     if is_exist(output_path):
         if SKIP_EXIST:
@@ -478,14 +458,11 @@ if __name__ == "__main__":
     print(f" Output Stack: {output_path}")
     print(f" Output Stack Data Keys: {OUTPUT_STACK_DATA_KEYS}")
     print(f" NFS (frequency slices to stack): {NFS}")
-    print(f" NWORKER (number of workers): {NWORKER}")
+    print(f" NWORKER (number of workers): {nworker}")
     print(f" SSIZE (catalog split size for processing): {SSIZE}")
     print(f" RANDOM_FLIP (randomly flip individual pair map): {RANDOM_FLIP}")
     print(f" COMPRESSION (compression method): {COMPRESSION}")
     print(f" SKIP_EXIST (skip existing stacks): {SKIP_EXIST}")
-    print(
-        f" STACK_PIX_COUNT (stack pixel counts instead of map values): {STACK_PIX_COUNT}"
-    )
     print(f" HALFWIDTH (stack result map half-width): {HALFWIDTH}")
     print(f" NPIX_X (stack result map X pixels): {NPIX_X}")
     print(f" NPIX_Y (stack result map Y pixels): {NPIX_Y}")
@@ -544,16 +521,10 @@ if __name__ == "__main__":
                 map_array, mask=map_array == 0, dtype=np.float32
             )
             print("Masked map with zeros.")
-        print(f"Loaded map from {map_path} with shape {map_array.shape}")  # type: ignore
+        print(f"Loaded map from {map_path} with shape {map_array.shape}")  # pyright: ignore[reportAttributeAccessIssue]
     except Exception as e:
         print(f"Failed to load map data from {map_path}: {e}", file=sys.stderr)
         sys.exit(1)
-
-    ## convert to pix count
-    if STACK_PIX_COUNT:
-        print("\nConverting map to pixel counts.")
-        mask_map = mask_map != 0
-        mask_map = mask_map.astype(np.float32)
 
     # Calculate resbins based on default args or env vars
     resbins = set_resbins(HALFWIDTH, NPIX_X, NPIX_Y, 2)
@@ -564,11 +535,11 @@ if __name__ == "__main__":
         output=output_path,
         pair_catalog=paircat,
         is_pro_ra=is_pra,
-        map_bins=mapbins,
+        map_bins=mapbins,  # pyright: ignore[reportArgumentType]
         hist_bins=resbins,
         nfreqslice=NFS,
         split_size=SSIZE,
-        nworker=NWORKER,
+        nworker=nworker,
         random_flip=RANDOM_FLIP,
         savekeys=OUTPUT_STACK_DATA_KEYS,
         compression=COMPRESSION,
