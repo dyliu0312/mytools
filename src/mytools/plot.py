@@ -3,14 +3,15 @@ Functions to plot the stack results.
 
 """
 
-from typing import Any, List, Literal, Optional, Sequence, Tuple, Union, Iterable
+from typing import Any, Iterable, List, Literal, Optional, Sequence, Tuple, Union  # pyright: ignore[reportDeprecated]
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.colors import LogNorm, Normalize, SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.patches import Arc, Ellipse
-from matplotlib.colors import LogNorm, SymLogNorm, Normalize
+
 
 def arg_list(arg: Any, n: int = 1, m: Optional[int] = None) -> List[Any]:
     """
@@ -37,14 +38,14 @@ def arg_list(arg: Any, n: int = 1, m: Optional[int] = None) -> List[Any]:
     return arg
 
 
-def get_minmax(data, q: float = 5) -> Tuple[float, float]:
+def get_minmax(data: np.ndarray, q: float = 5) -> np.ndarray:
     """
-    get the min and max of data with percentile.
+    get the min and max values of data with percentile.
     """
     if isinstance(data, np.ma.MaskedArray):
         data = data.compressed()
 
-    return np.percentile(data, [q, 100 - q])  # type: ignore
+    return np.percentile(data, [q, 100 - q])
 
 
 def get_ticks_labels(
@@ -76,7 +77,7 @@ def set_ticks(
     yticks: Optional[List[int]] = None,
     yticklabels: Optional[List[str]] = None,
     share: bool = True,
-    kw_get_ticks: Optional[dict] = None,
+    kw_get_ticks: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
     **kargs,
 ) -> None:
     """
@@ -96,7 +97,7 @@ def set_ticks(
         default_kwargs = dict(ticks=[20, 60, 100], shape=121, lim=(-3, 3), digits=0)
         if kw_get_ticks is not None:
             default_kwargs.update(kw_get_ticks)
-        xticks, xticklabels = get_ticks_labels(**default_kwargs)  # type: ignore
+        xticks, xticklabels = get_ticks_labels(**default_kwargs)  # pyright: ignore[reportArgumentType]
 
     if xticks is not None:
         ax.set_xticks(xticks, xticklabels, **kargs)
@@ -162,8 +163,8 @@ def make_figure(
     wspace: float = 0.1,
     hspace: float = 0.1,
     aspect: Optional[str] = "equal",
-    gridspec_kw: Optional[dict] = None,
-    subplot_kw: Optional[dict] = None,
+    gridspec_kw: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    subplot_kw: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
     **kwargs,
 ) -> Tuple[Figure, Any]:
     """
@@ -208,10 +209,10 @@ def make_figure(
 
 
 def get_norm(
-        norm: Literal["linear", "log", "symlog"] = "linear",
-        vmin: Optional[float] = None,
-        vmax: Optional[float] = None,
-    ):
+    norm: Literal["linear", "log", "symlog"] = "linear",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+):
     """
     get norm for colorbar.
 
@@ -230,7 +231,8 @@ def get_norm(
         return SymLogNorm(linthresh=1e-3, vmin=vmin, vmax=vmax)
     else:
         raise ValueError(f"norm = {norm} is not supported")
-    
+
+
 def plot_heatmap(
     *args,
     ax: Optional[Axes] = None,
@@ -248,10 +250,10 @@ def plot_heatmap(
     xlabel: Optional[str] = "X",
     ylabel: Optional[str] = "Y",
     change_ticks: bool = True,
-    kw_makefigure: Optional[dict] = None,
-    kw_pcolormesh: Optional[dict] = None,
-    kw_cbar: Optional[dict] = None,
-    kw_ticks: Optional[dict] = None,
+    kw_makefigure: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    kw_pcolormesh: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    kw_cbar: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    kw_ticks: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
 ) -> Axes:
     """
     plot heatmap with colorbar.
@@ -286,7 +288,7 @@ def plot_heatmap(
         kw_fig = {"figsize": (4, 3)}
         if kw_makefigure is not None:
             kw_fig.update(kw_makefigure)
-        fig, ax = make_figure(**kw_fig)  # type: ignore
+        fig, ax = make_figure(**kw_fig)  # pyright: ignore[reportArgumentType]
     else:
         fig = ax.get_figure()
 
@@ -308,8 +310,8 @@ def plot_heatmap(
         raise ValueError("Expected 1-3 arguments: [data], [x, data], or [x, y, data].")
 
     # if data is boolean array
-    if data.dtype.kind == 'b':
-        q = None # disable percentile calculation
+    if data.dtype.kind == "b":
+        q = None  # disable percentile calculation
 
     # --- Compute vmin/vmax ---
     if q is not None:
@@ -328,9 +330,9 @@ def plot_heatmap(
         p_kw.update(kw_pcolormesh)
 
     if n == 1:
-        pcm = ax.pcolormesh(data, **p_kw)
+        pcm = ax.pcolormesh(data, **p_kw)  # pyright: ignore[reportArgumentType]
     else:
-        pcm = ax.pcolormesh(x, y, data, **p_kw)  # type: ignore
+        pcm = ax.pcolormesh(x, y, data, **p_kw)  # pyright: ignore[reportPossiblyUnboundVariable, reportArgumentType]
 
     if tick_in:
         ax.tick_params(axis="both", direction="in")
@@ -354,7 +356,7 @@ def plot_heatmap(
         cb_kw = {"label": cbar_label, "orientation": orientation}
         if kw_cbar is not None:
             cb_kw.update(kw_cbar)
-        cb = fig.colorbar(pcm, cax=cbar_ax, **cb_kw)  # type: ignore
+        cb = fig.colorbar(pcm, cax=cbar_ax, **cb_kw)  # pyright: ignore[reportArgumentType]
 
         if cbar_loc == "top":
             cb.ax.xaxis.set_label_position("top")
@@ -372,7 +374,7 @@ def plot_heatmap(
         )
         if kw_ticks is not None:
             kw_set_ticks.update(kw_ticks)
-        set_ticks(ax, **kw_set_ticks)  # type: ignore
+        set_ticks(ax, **kw_set_ticks)  # pyright: ignore[reportArgumentType]
     return ax
 
 
@@ -393,10 +395,10 @@ def plot_heatmaps(
     ylabel: Union[str, List[str]] = "Y",
     change_ticks: bool = True,
     label_outer: bool = True,
-    kw_makefigure: Optional[dict] = None,
-    kw_pcolormesh: Optional[dict] = None,
-    kw_cbar: Optional[dict] = None,
-    kw_ticks: Optional[dict] = None,
+    kw_makefigure: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    kw_pcolormesh: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    kw_cbar: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    kw_ticks: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
 ) -> List[Axes]:
     """
     plot multiple heatmaps in a row.
@@ -445,7 +447,7 @@ def plot_heatmaps(
         kw_fig = {"nrows": 1, "ncols": n, "figsize": (4 * n, 3)}
         if kw_makefigure is not None:
             kw_fig.update(kw_makefigure)
-        fig, axes = make_figure(**kw_fig)
+        _, axes = make_figure(**kw_fig)  # pyright: ignore[reportArgumentType]
 
     if axes is None:
         raise ValueError("axes is None")
@@ -455,7 +457,7 @@ def plot_heatmaps(
             data[i],
             ax=ax,
             cmap=cmap[i],
-            norm=norm[i], # type: ignore
+            norm=norm[i],  # pyright: ignore[reportArgumentType]
             vmin=vmin[i],  # type: ignore
             vmax=vmax[i],  # type: ignore
             q=q,
@@ -488,7 +490,7 @@ def plot_stack_fit_res(
     q: float = 5,
     show_cbar: bool = True,
     cbar_label: Union[str, List[str]] = r"T[$\mu$K]",
-    kw_makefigure: Optional[dict] = dict(sharey=True),
+    kw_makefigure: Optional[dict] = dict(sharey=True),  # pyright: ignore[reportMissingTypeArgument]
     title: Union[str, List[str]] = [
         "Pairwise-stacked map",
         "Fitted halo contribution",
@@ -504,7 +506,7 @@ def plot_stack_fit_res(
     """
 
     if axes is None:
-        fig, axes = make_figure(1, 3, figsize=(12, 3), **kw_makefigure)  # type: ignore
+        _, axes = make_figure(1, 3, figsize=(12, 3), **kw_makefigure)  # pyright: ignore[reportCallIssue]
 
     axes = plot_heatmaps(
         data,
@@ -548,20 +550,20 @@ def plot_res(
     title: Union[str, List[str]] = ["HI only", "HI + noise"],
     xlabel: Union[str, List[str]] = "X",
     ylabel: Union[str, List[str]] = "Y",
-    kw_makefigure: Optional[dict] = dict(
+    kw_makefigure: Optional[dict] = dict(  # pyright: ignore[reportMissingTypeArgument]
         figsize=(6, 3),
         wspace=0.0,
         hspace=0.0,
     ),
-    kw_pcolormesh: Optional[dict] = None,
-    kw_cbar: Optional[dict] = None,
+    kw_pcolormesh: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    kw_cbar: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
 ) -> List[Axes]:
     """
     Plot residual maps (HI only and HI + noise) for comparison.
     """
 
     if axes is None:
-        fig, axes = make_figure(1, 2, **kw_makefigure)  # type: ignore
+        _, axes = make_figure(1, 2, **kw_makefigure)  # pyright: ignore[reportCallIssue]
     if axes is None:
         raise ValueError("axes must be provided")
 
@@ -575,7 +577,7 @@ def plot_res(
         q,
         tick_in,
         show_cbar,
-        cbar_loc,  # type: ignore
+        cbar_loc,  # pyright: ignore[reportArgumentType]
         cbar_label,  # type: ignore
         title,
         xlabel,
@@ -588,8 +590,8 @@ def plot_res(
 
 
 def plot_line(
-    x: List[Union[np.ndarray, List[float]]],
-    y: List[Union[np.ndarray, List[float]]],
+    x: List[Union[np.ndarray, Sequence[float]]],
+    y: List[Union[np.ndarray, Sequence[float]]],
     ax: Optional[Axes] = None,
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
@@ -672,8 +674,8 @@ def plot_line(
 
 
 def plot_profile_2c(
-    x: List[Union[np.ndarray, List[float]]],
-    y: List[Union[np.ndarray, List[float]]],
+    x: List[Union[np.ndarray, Sequence[float]]],
+    y: List[Union[np.ndarray, Sequence[float]]],
     cut: int = 2,
     axes: Optional[List[Axes]] = None,
     text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
@@ -725,7 +727,7 @@ def plot_profile_2c(
 
     """
     if axes is None:
-        fig, axes = make_figure(
+        _, axes = make_figure(
             1,
             2,
             figsize=(6, 4),
@@ -760,7 +762,7 @@ def plot_profile_2c(
         ls = linestyle[:cut] if i == 0 else linestyle[cut:]
         lb = label[:cut] if i == 0 else label[cut:]
         plot_line(
-            x_left if i == 0 else x_right,  # type: ignore
+            x_left if i == 0 else x_right,
             y_left if i == 0 else y_right,
             ax=ax,
             xlabel=xlabel[i],
@@ -803,8 +805,8 @@ def plot_profile_2c(
 
 
 def plot_profile_2r(
-    x: List[List[Union[np.ndarray, List[float]]]],
-    y: List[List[Union[np.ndarray, List[float]]]],
+    x: List[List[Union[np.ndarray, Sequence[float]]]],
+    y: List[List[Union[np.ndarray, Sequence[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], List[Axes], None] = None,
     text_pos: List[List[float]] = [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]],
@@ -819,9 +821,9 @@ def plot_profile_2r(
     label: Union[str, List[str], None] = None,
     tick_in: bool = True,
 ) -> Union[List[Axes], Tuple[Axes]]:
-    """ 
-    plot lines in two row subplots. 
-    
+    """
+    plot lines in two row subplots.
+
     Args:
         x (List[list]): x data points.
         y (List[list]): y data points.
@@ -849,7 +851,7 @@ def plot_profile_2r(
     ntext = 3
 
     if axes is None:
-        fig, axes = make_figure(
+        _, axes = make_figure(
             2,
             ncol,
             figsize=(4 * ncol + 2, 8),
@@ -897,7 +899,7 @@ def plot_profile_2r(
             raise ValueError("cut index is out of the range.") from ie
 
         # plot upper pannel
-        ax_up = axes[0, i] if ncol > 1 else axes[0]  # type: ignore
+        ax_up = axes[0, i] if ncol > 1 else axes[0]  # pyright: ignore[reportArgumentType, reportCallIssue]
         plot_line(
             x_up,
             y_up,
@@ -916,7 +918,7 @@ def plot_profile_2r(
         ax_up.text(*_text_pos[2], s=strw, color="r", fontsize=fontsize[0])
 
         # plot lower pannel
-        ax_down = axes[1, i] if ncol > 1 else axes[1]  # type: ignore
+        ax_down = axes[1, i] if ncol > 1 else axes[1]  # pyright: ignore[reportGeneralTypeIssues, reportArgumentType, reportCallIssue]
         plot_line(
             x_down,
             y_down,
@@ -951,8 +953,8 @@ def plot_profile_2r(
 
 
 def plot_profile_2c2r(
-    x: List[List[Union[np.ndarray, List[float]]]],
-    y: List[List[Union[np.ndarray, List[float]]]],
+    x: List[List[Union[np.ndarray, Sequence[float]]]],
+    y: List[List[Union[np.ndarray, Sequence[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], None] = None,
     text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
@@ -1006,7 +1008,7 @@ def plot_profile_2c2r(
     """
 
     if axes is None:
-        fig, axes = make_figure(
+        _, axes = make_figure(
             2,
             2,
             figsize=(8, 6),
@@ -1048,7 +1050,7 @@ def plot_profile_2c2r(
             x[i],
             y[i],
             cut=cut,
-            axes=list(axes)[i],  # type: ignore
+            axes=list(axes)[i],  # pyright: ignore[reportArgumentType]
             text_pos=text_pos[:ntext] if i == 0 else text_pos[ntext:],
             width=width[i],
             fontsize=fontsize[i],
@@ -1067,15 +1069,15 @@ def plot_profile_2c2r(
 
 def plot_hist(
     data: List[np.ndarray],
-    bins: Union[int, Sequence[float], str, None, list] = None,
+    bins: Union[int, Sequence[float], str, None] = None,
     ax: Optional[Axes] = None,
-    label: Union[str, list, None] = None,
-    color: Union[str, list, None] = None,
-    density: Union[bool, list] = True,
-    histtype: Union[str, list] = "step",
+    label: Union[str, List[Union[str, None]], None] = None,
+    color: Union[str, List[str], None] = None,
+    density: Union[bool, List[bool]] = True,
+    histtype: Union[str, List[str]] = "step",
     title: Optional[str] = None,
     xlabel: Optional[str] = None,
-    ylabel: str = "PDF",
+    ylabel: Optional[str] = "PDF",
     **kwargs,
 ) -> Axes:
     """
@@ -1083,7 +1085,7 @@ def plot_hist(
     """
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 4))
+        _, ax = plt.subplots(figsize=(6, 4))
     if ax is None:
         raise ValueError("ax must be specified.")
     data_array = np.array(data)
@@ -1105,7 +1107,7 @@ def plot_hist(
                 label=la,
                 color=color[i],
                 density=density[i],
-                histtype=histtype[i],
+                histtype=histtype[i],  # pyright: ignore[reportArgumentType]
                 **kwargs,
             )
     if any([la is not None for la in label]):
@@ -1118,7 +1120,7 @@ def plot_hist(
                 bins=bins[i],
                 color=color[i],
                 density=density[i],
-                histtype=histtype[i],
+                histtype=histtype[i],  # pyright: ignore[reportArgumentType]
                 **kwargs,
             )
 
@@ -1134,17 +1136,17 @@ def plot_hist(
 
 def plot_hist_2c(
     data: List[np.ndarray],
-    bins: Union[int, Sequence[float], str, None, list] = None,
+    bins: Union[int, Sequence[float], str, None] = None,
     cut: int = 1,
     axes: Optional[List[Axes]] = None,
     sharey: bool = True,
-    label: Union[str, list, None] = None,
-    color: Union[str, list, None] = None,
-    density: Union[bool, list] = True,
-    histtype: Union[str, list] = "step",
-    title: Union[str, list, None] = None,
-    xlabel: Union[str, list, None] = None,
-    ylabel: Union[str, list, None] = ["PDF", None],
+    label: Union[str, List[Union[str, None]], None] = None,
+    color: Union[str, List[str], None] = None,
+    density: Union[bool, List[bool]] = True,
+    histtype: Union[str, List[str]] = "step",
+    title: Union[str, List[Union[str, None]], None] = None,
+    xlabel: Union[str, List[Union[str, None]], None] = None,
+    ylabel: Union[str, List[Union[str, None]], None] = ["PDF", None],
     **kwargs,
 ) -> List[Axes]:
     """
@@ -1201,17 +1203,17 @@ def plot_hist_2c(
 
 def plot_hist_result(
     data: List[np.ndarray],
-    bins: Union[int, Sequence[float], str, None, list] = None,
+    bins: Union[int, Sequence[float], str, None] = None,
     cut: int = 4,
     axes: Optional[List[Axes]] = None,
     sharey: bool = True,
-    label: Union[str, list, None] = [None] * 4 + ["C", "L", "R", "B"],
-    color: Union[str, list, None] = ["r", "b", "g", "k"] * 2,
-    density: Union[bool, list] = True,
-    histtype: Union[str, list] = "step",
-    title: Union[str, list, None] = ["HI only", "HI + noise"],
-    xlabel: Union[str, list, None] = r"$T$[$\mu$K]",
-    ylabel: Union[str, list, None] = ["PDF", None],
+    label: Union[str, List[Union[str, None]], None] = [None] * 4 + ["C", "L", "R", "B"],
+    color: Union[str, List[str], None] = ["r", "b", "g", "k"] * 2,
+    density: Union[bool, List[bool]] = True,
+    histtype: Union[str, List[str]] = "step",
+    title: Union[str, List[Union[str, None]], None] = ["HI only", "HI + noise"],
+    xlabel: Union[str, List[Union[str, None]], None] = r"$T$[$\mu$K]",
+    ylabel: Union[str, List[Union[str, None]], None] = ["PDF", None],
     **kwargs,
 ) -> List[Axes]:
     """
@@ -1242,7 +1244,7 @@ def plot_hist_result(
 
 def plot_ellipses(
     ax: Axes,
-    xy_pos: List[Tuple[float, float]] = [(0, 0)],
+    xy_pos: List[Sequence[float]] = [(0, 0)],
     width: Union[float, List[float]] = 1,
     height: Union[float, List[float], None] = None,
     angle: Union[float, List[float]] = 0,
@@ -1266,7 +1268,7 @@ def plot_ellipses(
     # find the number of ellipse need to plot
     n = len(xy_pos)
     if n == 1:
-        e = Ellipse(xy_pos[0], width, height, angle=angle, **kwargs)  # type: ignore
+        e = Ellipse(xy_pos[0], width, height, angle=angle, **kwargs)  # pyright: ignore[reportArgumentType]
         ax.add_patch(e)
     else:
         width_list = arg_list(width, n)
@@ -1282,13 +1284,13 @@ def plot_ellipses(
         ):
             # Extract other properties from kwargs
             ellipse_kwargs = {key: value[i] for key, value in kwargs.items()}
-            e = Ellipse(xy, w, h, angle=a, **ellipse_kwargs)
+            e = Ellipse(xy, w, h, angle=a, **ellipse_kwargs)  # pyright: ignore[reportArgumentType]
             ax.add_patch(e)
 
 
 def plot_arcs(
     ax: Axes,
-    xy_pos: List[Tuple[float, float]] = [(0, 0)],
+    xy_pos: List[Sequence[float]] = [(0, 0)],
     width: Union[float, List[float]] = 1,
     height: Union[float, List[float], None] = None,
     angle: Union[float, List[float]] = 0,
@@ -1315,12 +1317,12 @@ def plot_arcs(
     n = len(xy_pos)
     if n == 1:
         a = Arc(
-            xy_pos[0],
-            width,  # type: ignore
-            height,  # type: ignore
-            angle=angle,  # type: ignore
-            theta1=theta1,  # type: ignore
-            theta2=theta2,  # type: ignore
+            xy_pos[0],  # pyright: ignore[reportArgumentType]
+            width,  # pyright: ignore[reportArgumentType]
+            height,  # pyright: ignore[reportArgumentType]
+            angle=angle,  # pyright: ignore[reportArgumentType]
+            theta1=theta1,  # pyright: ignore[reportArgumentType]
+            theta2=theta2,  # pyright: ignore[reportArgumentType]
             **kwargs,
         )  # type: ignore
         ax.add_patch(a)
@@ -1367,8 +1369,8 @@ def plot_sector(
                 width=width,
                 height=height,
                 angle=angle,
-                theta1=theta1[j],  # type: ignore
-                theta2=theta2[j],  # type: ignore
+                theta1=theta1[j],  # pyright: ignore[reportIndexIssue]
+                theta2=theta2[j],  # pyright: ignore[reportIndexIssue]
                 linestyle=linestyle,
                 ec=ec,
                 linewidth=linewidth,
@@ -1421,18 +1423,18 @@ def plot_axlines(
         # Vertical lines
         if vl is not None:
             if isinstance(vl, (int, float)):
-                current_ax.axvline(x=vl, **line_kwargs)  # type: ignore
+                current_ax.axvline(x=vl, **line_kwargs)  # pyright: ignore[reportArgumentType]
             elif isinstance(vl, Iterable):
                 for x in vl:
-                    current_ax.axvline(x=x, **line_kwargs)  # type: ignore
+                    current_ax.axvline(x=x, **line_kwargs)  # pyright: ignore[reportArgumentType]
 
         # Horizontal lines
         if hl is not None:
             if isinstance(hl, (int, float)):
-                current_ax.axhline(y=hl, **line_kwargs)  # type: ignore
+                current_ax.axhline(y=hl, **line_kwargs)  # pyright: ignore[reportArgumentType]
             elif isinstance(hl, Iterable):
                 for y in hl:
-                    current_ax.axhline(y=y, **line_kwargs)  # type: ignore
+                    current_ax.axhline(y=y, **line_kwargs)  # pyright: ignore[reportArgumentType]
     return None
 
 
@@ -1465,7 +1467,7 @@ def save_plot(
     else:
         raise TypeError(f"Unsupported type for plot_obj: {type(plot_obj)}")
 
-    fig.savefig(  # type: ignore
+    fig.savefig(  # pyright: ignore[reportAttributeAccessIssue]
         filename, dpi=dpi, bbox_inches=bbox_inches, pad_inches=pad_inches, **kwargs
     )
 

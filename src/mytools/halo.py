@@ -3,16 +3,20 @@ Functions to fit and subtract halo contributions.
 
 """
 
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from mytools.bins import edge2center, get_id_edge, get_linbin
 from scipy.optimize import least_squares
+
+from mytools.bins import edge2center, get_id_edge, get_linbin
 
 
 def cal_r(
-    point: list, grids: np.ndarray, runit: np.ndarray, costheta: Optional[float] = None
-):
+    point: Sequence[float],
+    grids: np.ndarray,
+    runit: np.ndarray,
+    costheta: Optional[float] = None,
+) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Given a point, calculate the radius of each grid,
     and mask outside the given costheta range
@@ -47,13 +51,13 @@ def cal_r(
 def halo_fit(
     data: np.ndarray,
     rbin_e: np.ndarray = np.arange(0, 6, 0.04),
-    xlim: list = [-3, 3],
-    ylim: Optional[list] = None,
-    lc: list = [-1, 0],
-    rc: list = [1, 0],
+    xlim: list = [-3, 3],  # pyright: ignore[reportMissingTypeArgument]
+    ylim: Optional[list] = None,  # pyright: ignore[reportMissingTypeArgument]
+    lc: list = [-1, 0],  # pyright: ignore[reportMissingTypeArgument]
+    rc: list = [1, 0],  # pyright: ignore[reportMissingTypeArgument]
     costheta: float = 1 / 2,
     print_fit_res: bool = True,
-):
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     use a set of random numbers to be initial profile,
     use two triangle sector only to fit,
@@ -97,7 +101,7 @@ def halo_fit(
     r2_indices = get_id_edge(r2.T, rbin_e)
 
     rbin_c = edge2center(rbin_e)
-    r = rbin_c[: r1_indices.max() + 1]
+    r = rbin_c[: r1_indices.max() + 1]  # pyright: ignore[reportAttributeAccessIssue]
     init_paras = np.random.random(size=r.shape).astype("float32") * data.max()
 
     def get_fitmap(profile, r1_indices, r2_indices):
@@ -126,10 +130,10 @@ def halo_fit(
 def halo_fit_seprate(
     data: np.ndarray,
     rbin_e: np.ndarray = np.arange(0, 6, 0.04),
-    xlim: list = [-3, 3],
-    ylim: Optional[list] = None,
-    lc: list = [-1, 0],
-    rc: list = [1, 0],
+    xlim: list = [-3, 3],  # pyright: ignore[reportMissingTypeArgument]
+    ylim: Optional[list] = None,  # pyright: ignore[reportMissingTypeArgument]
+    lc: list = [-1, 0],  # pyright: ignore[reportMissingTypeArgument]
+    rc: list = [1, 0],  # pyright: ignore[reportMissingTypeArgument]
     costheta: float = 1 / 2,
     print_fit_res: bool = True,
 ):
@@ -173,10 +177,10 @@ def halo_fit_seprate(
 
     rbin_c = edge2center(rbin_e)
     # left
-    r1 = rbin_c[: r1_indices.max() + 1]
+    r1 = rbin_c[: r1_indices.max() + 1]  # pyright: ignore[reportAttributeAccessIssue]
     init_paras1 = np.random.random(size=r1.shape).astype("float32") * data[v1].max()
     # right
-    r2 = rbin_c[: r2_indices.max() + 1]
+    r2 = rbin_c[: r2_indices.max() + 1]  # pyright: ignore[reportAttributeAccessIssue]
     init_paras2 = np.random.random(size=r2.shape).astype("float32") * data[v2].max()
 
     init_paras = [*init_paras1, *init_paras2]
@@ -210,10 +214,10 @@ def halo_fit_seprate(
 
 
 def halo_subtract(
-    data: Union[list, np.ndarray],
-    f: Callable = halo_fit,
+    data: Union[np.ndarray, Sequence[np.ndarray]],
+    func_halo_fit: Callable[..., Tuple[np.ndarray, np.ndarray, np.ndarray]] = halo_fit,
     rbin_e: np.ndarray = np.arange(0, 6, 0.04),
-    lim: list = [-3, 3],
+    lim: Sequence[float] = [-3, 3],
     costheta: float = np.cos(np.pi / 4),
     print_fit_res: bool = False,
     **kwargs,
@@ -222,18 +226,16 @@ def halo_subtract(
     for each data, fit a halo profile, and subtract it from the data.
     Args:
         data (list or np.ndarray): the data to be fitted and subtracted.
-        f (Callable): the function to fit the halo profile.
+        func_halo_fit (Callable): the function to fit the halo profile.
         rbin_e (np.ndarray): the edge of the radius bins.
-        lim (list): the x range of the data.
+        lim (list[float,float]): the x range of the data.
         costheta (float): the valid area are selected within -costheta to costheta.
         print_fit_res (bool): whether to print the result of the fitting.
     Return:
         fitted_map_list, residuals_list, mask_bool_array
     """
-    is_list = isinstance(data, list)
-    if is_list:
-        data = data
-    else:
+    is_single = isinstance(data, np.ndarray)
+    if is_single:
         data = [data]
 
     fit = []
@@ -241,7 +243,7 @@ def halo_subtract(
     fit_mask = None
 
     for d in data:
-        fitmap, _, curr_fit_mask = f(
+        fitmap, _, curr_fit_mask = func_halo_fit(
             d, rbin_e, lim, costheta=costheta, print_fit_res=print_fit_res, **kwargs
         )
         fit.append(fitmap)
@@ -249,7 +251,7 @@ def halo_subtract(
         if fit_mask is None:
             fit_mask = curr_fit_mask
 
-    if is_list:
-        return fit, res, fit_mask
-    else:
+    if is_single:
         return fit[0], res[0], fit_mask
+    else:
+        return fit, res, fit_mask

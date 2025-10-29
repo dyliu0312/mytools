@@ -4,7 +4,7 @@ tools for HDF5 data manipulation.
 """
 
 import os
-from typing import Any, Dict, List, Optional, Union, Callable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union  # pyright: ignore[reportDeprecated]
 
 import h5py as h5
 import numpy as np
@@ -58,7 +58,7 @@ def is_exist(file_path: str) -> bool:
 # --- hdf5 file ---
 def info_items(name: str, item: Any):
     """
-    Prints detailed information (type, shape, dtype, and all attributes) for a 
+    Prints detailed information (type, shape, dtype, and all attributes) for a
     Group or Dataset object encountered during h5py.File.visititems().
 
     This function is designed to be passed as the `func` argument to visititems().
@@ -71,9 +71,13 @@ def info_items(name: str, item: Any):
     print(f"Item: {name}")
 
     # 1. Print item type
-    item_type = 'Group' if isinstance(item, h5.Group) else \
-                'Dataset' if isinstance(item, h5.Dataset) else \
-                'Other'
+    item_type = (
+        "Group"
+        if isinstance(item, h5.Group)
+        else "Dataset"
+        if isinstance(item, h5.Dataset)
+        else "Other"
+    )
     print(f"Type: {item_type}")
 
     # 2. Print shape and dtype for Datasets
@@ -87,26 +91,32 @@ def info_items(name: str, item: Any):
         for attr_name, value in item.attrs.items():
             # Post-process attribute value for clean display
             display_value = value
-            
+
             # Decode byte strings (often used for HDF5 strings)
             if isinstance(value, bytes):
-                display_value = value.decode('utf-8')
+                display_value = value.decode("utf-8")
             # Handle numpy arrays of byte strings
-            elif isinstance(value, np.ndarray) and value.dtype.kind == 'S':
+            elif isinstance(value, np.ndarray) and value.dtype.kind == "S":
                 display_value = value.astype(str)
             # Limit array display length
             elif isinstance(value, np.ndarray):
                 # For very long arrays, only show the start and type
                 if value.size > 5:
-                    display_value = f"np.array(shape={value.shape}, dtype={value.dtype})"
+                    display_value = (
+                        f"np.array(shape={value.shape}, dtype={value.dtype})"
+                    )
                 # Otherwise, show the array
-            
+
             # Print the attribute
             print(f"- {attr_name}: {display_value}")
     else:
         print(" None")
-        
-def vitems(file_path: str, func: Callable = info_items):
+
+
+def vitems(
+    file_path: str,
+    func: Callable[[str, Union[h5.Group, h5.Dataset]], None] = info_items,
+):
     """
     Recursively visit the group and dataset information in an HDF5 file using the visititems() method.
 
@@ -136,7 +146,7 @@ def del_data(file_path: str, key: str):
         del f[key]
 
 
-def print_dset_attrs(dataset):
+def print_dset_attrs(dataset: h5.Dataset):
     """
     Prints the attributes of a given dataset if any exist.
     """
@@ -148,7 +158,7 @@ def print_dset_attrs(dataset):
 
 
 def read_h5(
-    file_path: str, key: Union[str, List[str]], print_attrs: bool = False
+    file_path: str, key: Union[str, Iterable[str]], print_attrs: bool = False
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """
     Read dataset from an HDF5 file.
@@ -172,34 +182,40 @@ def read_h5(
         available_keys = list(f.keys())
 
         # Helper function to handle reading and printing attributes for each key
-        def get_data_for_key(k):
+        def get_data_for_key(k: str) -> np.ndarray:
             if k not in f:
                 raise ValueError(
                     f"Key '{k}' not found. Available keys are: {available_keys}"
                 )
             obj = f[k]
-            if k in f and not obj.shape == ():  # type: ignore
-                dataset = obj[:]  # type: ignore
+            if not isinstance(obj, h5.Dataset):
+                raise KeyError(f"Key '{k}' is a group, not a dataset.")
             else:
-                dataset = obj[()]  # type: ignore
-            if print_attrs:
-                print_dset_attrs(obj)
-            return dataset
+                if k in f and not obj.shape == ():
+                    dataset = obj[:]
+                else:
+                    dataset = obj[()]
+                if print_attrs:
+                    print_dset_attrs(obj)
+                return dataset
 
         # If a single key is provided, return the corresponding data
         if isinstance(key, str):
-            return get_data_for_key(key)  # type: ignore
+            return get_data_for_key(key)
 
         # If a list of keys is provided, return a list of corresponding data
         elif isinstance(key, list):
             data_list = [get_data_for_key(k) for k in key]
-            return data_list  # type: ignore
+            return data_list
 
 
 def save_h5(
-    output: str, keys: List[str], data: list, group_name: Union[str, None] = None,
-    **kwargs
-):
+    output: str,
+    keys: List[str],
+    data: List[np.ndarray],
+    group_name: Union[str, None] = None,
+    **kwargs,
+) -> None:
     """
     Save data to an HDF5 file and create group if group_name is provided.
 
@@ -264,14 +280,16 @@ def save_attrs(filepath, file_attrs=None, dataset_attrs=None):
                     f"Successfully stored dataset-level attributes for '{dataset_name}'"
                 )
 
+
 def _decode_attribute_value(value: Any) -> Any:
     """Helper function to decode HDF5 byte strings."""
     if isinstance(value, bytes):
-        return value.decode('utf-8')
-    elif isinstance(value, np.ndarray) and value.dtype.kind == 'S':
+        return value.decode("utf-8")
+    elif isinstance(value, np.ndarray) and value.dtype.kind == "S":
         # Decode numpy arrays of byte strings
         return value.astype(str)
     return value
+
 
 def load_attrs(file_path: str) -> Optional[Dict[str, Any]]:
     """
@@ -295,14 +313,13 @@ def load_attrs(file_path: str) -> Optional[Dict[str, Any]]:
                                   }
     """
     try:
-        with h5.File(file_path, 'r') as f:
-            
+        with h5.File(file_path, "r") as f:
             # 1. Read File-Level Attributes
             # These are attributes stored directly on the root object '/'.
             file_attrs = {}
             for name, value in f.attrs.items():
                 file_attrs[name] = _decode_attribute_value(value)
-            
+
             # 2. Read Dataset-Level Attributes
             # We use f.visititems to find all datasets and read their attributes.
             dataset_attrs = {}
@@ -315,25 +332,23 @@ def load_attrs(file_path: str) -> Optional[Dict[str, Any]]:
                     if item.attrs:
                         for attr_name, attr_value in item.attrs.items():
                             attrs[attr_name] = _decode_attribute_value(attr_value)
-                        
+
                         # Store the attributes using the full path name as the key
-                        dataset_attrs[f'/{name}'] = attrs
+                        dataset_attrs[f"/{name}"] = attrs
 
             # Traverse the file structure
             f.visititems(visitor_func)
-            
+
             # Return the combined, structured result
-            return {
-                'file_attrs': file_attrs,
-                'dataset_attrs': dataset_attrs
-            }
-            
+            return {"file_attrs": file_attrs, "dataset_attrs": dataset_attrs}
+
     except FileNotFoundError:
         print(f"Error: File not found at {file_path}")
         return None
     except Exception as e:
         print(f"An error occurred while loading HDF5 attributes: {e}")
         return None
+
 
 # --- generator ---
 def split_data_generator(splitsize: int, *data: np.ndarray):
@@ -386,8 +401,8 @@ def get_stacked_result(
 
     def add_up(name, obj):
         if isinstance(obj, h5.Group):
-            si = obj[s_key][:]  # type: ignore
-            mi = obj[m_key][:]  # type: ignore
+            si = obj[s_key][:]  # pyright: ignore[reportIndexIssue]
+            mi = obj[m_key][:]  # pyright: ignore[reportIndexIssue]
             s = np.ma.array(si, mask=mi)
             result.append(s)
 

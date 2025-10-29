@@ -3,12 +3,13 @@ Functions used to stack galaxy-pairs signal.
 
 """
 
+from typing import Sequence, Tuple
+
 import numpy as np
-from typing import Tuple, List
 
 
 def get_projection_lengths(
-    p1: list, p2: list, shape: Tuple[int, int], scale: bool = True
+    p1: Sequence[int], p2: Sequence[int], shape: Tuple[int, int], scale: bool = True
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     get horizontal and vertical projection lengths for each grid of data, using p2 -p1 as unit vector.
@@ -52,8 +53,11 @@ def get_projection_lengths(
 
 
 def hist_data_2d(
-    mask_data: np.ma.masked_array, h: np.ndarray, v: np.ndarray, histbins: Tuple[list]
-) -> np.ma.masked_array:
+    mask_data: np.ma.MaskedArray,
+    h: np.ndarray,
+    v: np.ndarray,
+    histbins: Sequence[np.ndarray],
+) -> np.ma.MaskedArray:
     """
     using histogram2d to rotate and rescale the 2d data.
 
@@ -61,7 +65,7 @@ def hist_data_2d(
         mask_data (np.ma.masked_array): the 2d data with masked invalid data points.
         h (np.array): the horizontal projection lengths for each grid of data.
         v (np.array): the vertical projection lengths for each grid of data.
-        histbins (tuple): the histogram bins.
+        histbins (sequence[np.ndarray]): the bins of histogram.
 
     Return:
         the averaged histogram result, the bins which no points fall in were masked.
@@ -94,8 +98,11 @@ def hist_data_2d(
 
 
 def hist_data_3d(
-    mask_data: np.ma.masked_array, p1: list, p2: list, hist_bins: Tuple[List[float]]
-) -> np.ma.masked_array:
+    mask_data: np.ma.MaskedArray,
+    p1: Sequence,  # pyright: ignore[reportMissingTypeArgument]
+    p2: Sequence,  # pyright: ignore[reportMissingTypeArgument]
+    hist_bins: Sequence[np.ndarray],
+) -> np.ma.MaskedArray:
     """
     For each frequency slices, use histogram2d to rotate and rescale it.
 
@@ -103,7 +110,7 @@ def hist_data_3d(
         mask_data (np.ma.array): the 3d data with masked invalid data points.
         p1 (list[int, int]): the indices of point one.
         p2 (list[int, int]): the indices of point two.
-        hist_bins (tuple): the histogram bins.
+        hist_bins (sequence[np.ndarray]): the bins of histogram.
     Return:
         the averaged histogram results for each 3d data, the bins which no points fall in were masked.
     """
@@ -125,7 +132,7 @@ def hist_data_3d(
 
     if trip:
         signals = np.ma.array(
-            [hist_data_2d(mask_data[i, :, :], h, v, hist_bins) for i in range(nf)] # type: ignore
+            [hist_data_2d(mask_data[i, :, :], h, v, hist_bins) for i in range(nf)]  # pyright: ignore[reportPossiblyUnboundVariable]
         )
     else:
         signals = hist_data_2d(mask_data, h, v, hist_bins)
@@ -153,6 +160,6 @@ def cut_freq(
     else:
         flags[:, ~valid] = True
 
-    np.clip(freqs, freq_min, freq_max, out=freqs)
+    _ = np.clip(freqs, freq_min, freq_max, out=freqs)
 
     return freqs, flags

@@ -4,31 +4,54 @@ define some functions to calculate quantities.
 """
 
 from mytools.constant import (
-    PI,
     A_HI,
-    HI_MASS,
+    C_BOL,
+    C_HUB,
+    C_PLK,
     FWHM2SIGMA,
-    HI_restfreq,
-    HI_restwave,
-    light_speed,
-    Planck_constant,
-    Boltzmann_constant,
-    Hubble_constant_dimensionless,
-    plk,  # type: ignore
+    HI_MASS,
+    HI_REST_FREQ,
+    HI_REST_WAVE,
+    LIGHT_SPEED,
+    PI,
     np,
+    plk,  # pyright: ignore[reportAttributeAccessIssue]
     u,
 )
 
-def freq2wave(freq, unit_freq=u.GHz, unit_wave=u.cm):
+# define some useful units
+u_ghz = u.Unit("GHz")
+u_mhz = u.Unit("MHz")
+
+u_kpc = u.Unit("kpc")
+u_m = u.Unit("m")
+u_cm = u.Unit("cm")
+
+u_deg = u.Unit("deg")
+u_arcmin = u.Unit("arcmin")
+
+u_k = u.Unit("K")
+u_mk = u.Unit("mK")
+
+u_s = u.Unit("s")
+
+u_solmass = u.Unit("Msun")
+
+u_jy = u.Unit("Jy")
+u_mjy = u.Unit("mJy")
+
+
+def freq2wave(freq, unit_freq=u_ghz, unit_wave=u_cm):
     """
     turn frequency into wavelength.
     """
     if not isinstance(freq, u.Quantity):
         freq = u.Quantity(freq, unit_freq)
-        
+
     return freq.to(unit_wave, equivalencies=u.spectral())
 
-def wave2freq(wave, unit_wave=u.cm, unit_freq=u.GHz):
+
+def wave2freq(wave, unit_wave=u_cm, unit_freq=u_ghz):
     """
     turn wavelength into frequency.
     """
@@ -36,11 +59,12 @@ def wave2freq(wave, unit_wave=u.cm, unit_freq=u.GHz):
         wave = u.Quantity(wave, unit_wave)
 
     return wave.to(unit_freq, equivalencies=u.spectral())
-    
-def dv2df(dv, z=None, freq=HI_restfreq):
+
+
+def dv2df(dv, z=None, freq=HI_REST_FREQ):
     """
     Turn velocity width into frequency width.
-    
+
     Args:
         dv: velocity width.
         z: redshift, default is None. \
@@ -53,28 +77,28 @@ def dv2df(dv, z=None, freq=HI_restfreq):
     if z is not None:
         freq = freq / (1 + z)
 
-    df = dv / light_speed * freq
+    df = dv / LIGHT_SPEED * freq
 
     return df
 
 
-def df2dv(df, z=None, freq=HI_restfreq):
+def df2dv(df, z=None, freq=HI_REST_FREQ):
     """
     Turn frequency width into velocity width.
-    
+
     Args:
         df: the frequency width.
         z: redshift, default is None. \
             If provided, used the **redshifted** frequency as reference.
         freq: the reference freqeuncy, default is the HI rest frequency.
-        
+
     Returns:
         the corresponding velocity width.
     """
     if z is not None:
         freq = freq / (1 + z)
 
-    dv = df / freq * light_speed
+    dv = df / freq * LIGHT_SPEED
 
     return dv
 
@@ -94,21 +118,19 @@ def dc_to_z(dc, box_length, box_z_center=0.1):
     """
     hubble_z = plk.H(box_z_center)  # in unit km/Mpc/s
 
-    z = box_z_center + (dc - box_length / 2) / Hubble_constant_dimensionless * (
-        hubble_z / light_speed
-    )
+    z = box_z_center + (dc - box_length / 2) / C_HUB * (hubble_z / LIGHT_SPEED)
 
     return z
 
 
-def freq2z(freq, restfreq=HI_restfreq):
+def freq2z(freq, restfreq=HI_REST_FREQ):
     """
     turn observed frequency into redshfit.
     """
     return restfreq / freq - 1
 
 
-def z2freq(z, sight_veocity=None, restfreq=HI_restfreq, neglect_second_term=True):
+def z2freq(z, sight_veocity=None, restfreq=HI_REST_FREQ, neglect_second_term=True):
     """
     turn redshift into observed frequency.
 
@@ -126,14 +148,16 @@ def z2freq(z, sight_veocity=None, restfreq=HI_restfreq, neglect_second_term=True
     if sight_veocity is None:
         return restfreq / (1 + z)
     else:
-        z_peculiar = (sight_veocity / light_speed).value
+        z_peculiar = (sight_veocity / LIGHT_SPEED).value
         z_obs = z + z_peculiar
         if not neglect_second_term:
             z_obs += z * z_peculiar
         return restfreq / (1 + z_obs)
 
 
-def resolution(diameter=300 * u.m, wavelength=HI_restwave, factor=1.22):
+def resolution(
+    diameter=300 * u_m, wavelength: u.Quantity = HI_REST_WAVE, factor: float = 1.22
+):
     """
     get the resolution of the telescope.
 
@@ -145,12 +169,11 @@ def resolution(diameter=300 * u.m, wavelength=HI_restwave, factor=1.22):
     Returns:
         resolution in unit arcmin.
     """
-    return (factor * wavelength / diameter).to(
-        u.arcmin, equivalencies=u.dimensionless_angles()
-    )
+    reso = factor * wavelength / diameter
+    return reso.to(u_arcmin, equivalencies=u.dimensionless_angles())  # pyright: ignore[reportAttributeAccessIssue]
 
 
-def mainbeam(z=0.0, diameter=300 * u.m, **args):
+def mainbeam(z=0.0, diameter=300 * u_m, **args):
     """
     return the size of main beam at redshift z.
 
@@ -158,7 +181,7 @@ def mainbeam(z=0.0, diameter=300 * u.m, **args):
     but the fully illuminated aperture at any time is D = 300 m.
     Since the telescope is designed to track objects.
     """
-    HI_wave_obs = HI_restwave * (1 + z)
+    HI_wave_obs = HI_REST_WAVE * (1 + z)
     return resolution(diameter=diameter, wavelength=HI_wave_obs, **args)
 
 
@@ -187,7 +210,7 @@ def beam_solid_angle(a=mainbeam(), b=None):
 
 
 def drift_integration_time(
-    beamsize=mainbeam(), dec=26 * u.deg, angular_velocity=0.25 * u.arcmin / u.s
+    beamsize=mainbeam(), dec=26 * u_deg, angular_velocity=0.25 * u_arcmin / u_s
 ):
     """
     calculate the integration time of the pixel within the FWHM beam width, during the drift scan.
@@ -218,7 +241,7 @@ def get_integration_time_FAST_HIIM(z=0.1, factor=2, **args):
     return factor * drift_integration_time(beamsize, **args)
 
 
-def tb_sky(freq=HI_restfreq):
+def tb_sky(freq=HI_REST_FREQ):
     """
     calculate the brightness temperature of the sky.
 
@@ -227,19 +250,19 @@ def tb_sky(freq=HI_restfreq):
     Args:
         freq: the frequency, defalut is the HI rest frequency.
     """
-    t = 2.73 + 25.2 * (0.408 / freq.to_value(u.GHz)) ** 2.75  # type: ignore
+    t = 2.73 + 25.2 * (0.408 / freq.to_value(u_ghz)) ** 2.75  # pyright: ignore[reportOperatorIssue]
 
-    return t * u.K
+    return t * u_k
 
 
-def circular_area(diameter=300 * u.m):
+def circular_area(diameter=300 * u_m):
     """
     return the area of the circular aperture.
     """
-    return PI * (diameter / 2) ** 2
+    return PI * (diameter / 2) ** 2  # pyright: ignore[reportOperatorIssue]
 
 
-def SEFD(t_sys=20 * u.K, effective_area=circular_area()):
+def SEFD(t_sys=20 * u_k, effective_area=circular_area()):
     """
     calculate the system equivalent flux density.
 
@@ -250,14 +273,14 @@ def SEFD(t_sys=20 * u.K, effective_area=circular_area()):
     Returns:
         the SEFD in unit Jy.
     """
-    return (2 * Boltzmann_constant * t_sys / effective_area).to(u.Jy)
+    return (2 * C_BOL * t_sys / effective_area).to(u_jy)
 
 
 def flux_density_sensitivity(
-    t_sys=20 * u.K,
+    t_sys=20 * u_k,
     n_p=2,
-    delta_f=0.1 * u.MHz,
-    delta_t=48 * u.s,
+    delta_f=0.1 * u_mhz,
+    delta_t=48 * u_s,
     system_efficiency=0.7,
     effective_area=circular_area(),
 ):
@@ -276,10 +299,10 @@ def flux_density_sensitivity(
         the flux density sensitivity in unit mJy.
     """
 
-    A = SEFD(t_sys, effective_area=effective_area).to(u.mJy) / system_efficiency
-    B = (n_p * delta_f * delta_t).to_value("")
+    A = SEFD(t_sys, effective_area=effective_area).to(u_mjy) / system_efficiency
+    B = (n_p * delta_f * delta_t).to_value("")  # pyright: ignore[reportAttributeAccessIssue]
 
-    return A / B**0.5
+    return A / B**0.5  # pyright: ignore[reportOperatorIssue]
 
 
 def snu2tb(flux_density, omega_mb, freq, z=None):
@@ -298,7 +321,7 @@ def snu2tb(flux_density, omega_mb, freq, z=None):
     """
 
     tb = (flux_density / omega_mb).to(
-        u.mK, equivalencies=u.brightness_temperature(freq)
+        u_mk, equivalencies=u.brightness_temperature(freq)
     )
 
     if z is not None:
@@ -309,10 +332,10 @@ def snu2tb(flux_density, omega_mb, freq, z=None):
 
 def brightness_temperature_sensitivity(
     z=0.1,
-    t_sys=20 * u.K,
+    t_sys=20 * u_k,
     n_pol=2,
-    delta_f=0.1 * u.MHz,
-    delta_t=48 * u.s,
+    delta_f=0.1 * u_mhz,
+    delta_t=48 * u_s,
     system_efficiency=0.7,
     effictive_area=circular_area(),
 ):
@@ -341,7 +364,7 @@ def brightness_temperature_sensitivity(
 
 
 def mass_to_brightness_temperature(
-    z=0.1, m=1e10 * u.solMass, pixel_width=20 * u.kpc, delta_f=0.1 * u.MHz
+    z=0.1, m=1e10 * u_solmass, pixel_width=20 * u_kpc, delta_f=0.1 * u_mhz
 ):
     """
     convert the HI mass into brightness temperature.
@@ -367,13 +390,7 @@ def mass_to_brightness_temperature(
 
     """
 
-    a = (
-        3
-        * light_speed**2
-        * Planck_constant
-        * A_HI
-        / (32 * PI * Boltzmann_constant * HI_MASS * HI_restfreq)
-    )
+    a = 3 * LIGHT_SPEED**2 * C_PLK * A_HI / (32 * PI * C_BOL * HI_MASS * HI_REST_FREQ)
     dl = plk.luminosity_distance(z)
     omega_p = (pixel_width / dl) ** 2
     b = m / (omega_p * delta_f * dl**2)
@@ -389,13 +406,13 @@ def get_unit_factor(current_unit, target_unit):
     Examples:
         unit_factor('m', 'cm') = 100
 
-        unit_factor(mass_to_brightness_temperature().unit, u.K) = 2e-9
+        unit_factor(mass_to_brightness_temperature().unit, u_k) = 2e-9
 
     """
     return u.Unit(current_unit).to(target_unit)
 
 
-def get_beam_npix(z=0.1, beamsize=None, pixel_width=20 * u.kpc):
+def get_beam_npix(z=0.1, beamsize=None, pixel_width=20 * u_kpc):
     """
     calculate the number of pixels covered by the beam.
     """

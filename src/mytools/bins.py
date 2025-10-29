@@ -2,7 +2,7 @@
 Functions for bins
 """
 
-from typing import Union, Tuple, List
+from typing import List, Sequence, Tuple, Union  # pyright: ignore[reportDeprecated]
 
 import numpy as np
 
@@ -59,44 +59,75 @@ def set_resbins(
     hbin = get_linbin(-width, width, nx, offset=offset, center=center)
     vbin = get_linbin(-width, width, ny, offset=offset, center=center)
 
-    return (hbin, vbin)
+    return hbin, vbin
 
 
 def get_id_edge(
-    coordinate: float, bins: Union[list, np.ndarray], right: bool = False
-) -> np.int64:
+    coordinate: Union[float, Sequence[float], np.ndarray],
+    bins: Union[List[float], np.ndarray],
+    right: bool = False,
+) -> Union[int, np.ndarray]:
     """
-    get coordinate corresponding pixel index in the map.
+    Get the bin indices for given coordinates based on specified bin edges.
 
-    Notes:
-        we using the numpy.digitize() function to get the index of the bin that the coordinate falls into.
-        The right parameter is used to specify whether the coordinate should be included in the rightmost bin.
-        The return index of numpy.digitize() with less equal to zero is not valid, large than the size of bins is also invalid.
-        And the first index of digitize() is one, so we minus one for zero starting index.
+    Uses numpy.digitize() to find the indices of the bins that the coordinates fall into.
+    The returned indices are adjusted to be zero-based.
+
+    Note:
+        - Returned indices less than 0 or greater than the size of bins are invalid
+        - The first valid index is 0 after adjustment
+        - The `right` parameter controls whether intervals include the right or left bin edge
+
+    Args:
+        coordinate: Input coordinate(s). Can be a single float or sequence of floats.
+        bins: Array-like of bin edges. Must be monotonically increasing.
+        right: If True, the bin intervals are [a, b) (right edge excluded).
+               If False, the bin intervals are (a, b] (left edge excluded).
+               Defaults to False.
+
+    Returns:
+        Bin indices as integer or numpy array. Zero-based indices indicating which bin
+        each coordinate falls into. Invalid coordinates return indices outside the
+        valid range [0, len(bins)-1].
+
+    Example:
+        >>> get_id_edge(2.5, [1, 2, 3, 4])
+        np.int64(1)
+        >>> get_id_edge([1.5, 2.5, 3.5], [1, 2, 3, 4])
+        array([0, 1, 2])
     """
-
-    index = (
-        np.digitize(coordinate, bins=bins, right=right) - 1
-    )  # minus one is need using digitize()
-
-    return index
+    inds = np.digitize(coordinate, bins=bins, right=right) - 1
+    return inds
 
 
 def get_ids_edge(
-    coordinates: List[float],
-    bins: Tuple[List[float], List[float], List[float]],
+    coordinates: Tuple,  # pyright: ignore[reportMissingTypeArgument]
+    bins: Tuple,  # pyright: ignore[reportMissingTypeArgument]
     right: bool = False,
-) -> Tuple[np.int64, np.int64, np.int64]:
+) -> Tuple[Union[int, np.ndarray], Union[int, np.ndarray], Union[int, np.ndarray]]:
     """
-    get coordinates corresponding pixel indices in the map.
+    Get bin indices for 3D coordinates in X, Y, and frequency dimensions.
+
+    Computes the bin indices for each coordinate component (X, Y, frequency) using
+    their respective bin definitions.
 
     Args:
-        coordinates (list[float, float, float]): the coordinates of galaxy, given by X, Y, and frequency.
-        bins (tuple[list,list,list]): the bins of X, Y, and frequency.
-        right (bool): if True, the coordinate should be included in the rightmost bin.
+        coordinates: Tuple of three sequences containing X, Y, and frequency coordinates.
+        bins: Tuple of three lists defining bin edges for X, Y, and frequency dimensions.
+              Each must be monotonically increasing.
+        right: If True, the bin intervals are [a, b) (right edge excluded).
+               If False, the bin intervals are (a, b] (left edge excluded).
+               Defaults to False.
 
     Returns:
-        the indices of X, Y, and frequency.
+        Tuple of three arrays (x_id, y_id, f_id) containing the bin indices for
+        X, Y, and frequency coordinates respectively. All indices are zero-based.
+
+    Example:
+        >>> coords = ([1.5, 2.5], [2.5, 3.5], [0.5, 1.5])
+        >>> bins = ([1, 2, 3], [2, 3, 4], [0, 1, 2])
+        >>> get_ids_edge(coords, bins)
+        (array([0, 1]), array([0, 1]), array([0, 1]))
     """
     x, y, f = coordinates
     xbin, ybin, fbin = bins
