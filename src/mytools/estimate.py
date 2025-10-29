@@ -2,7 +2,7 @@
 estimate the signal level
 """
 
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,8 +32,11 @@ def gaussian_function(
 
 
 def fit_func(
-    x: np.ndarray, y: np.ndarray, func: Callable, bounds: Optional[Tuple] = None
-):
+    x: np.ndarray,
+    y: np.ndarray,
+    func: Callable[..., np.ndarray],
+    bounds: Optional[Tuple[Sequence[float], Sequence[float]]] = None,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Fit a function to the given data using 'curve fit'.
 
@@ -58,7 +61,7 @@ def get_start_end_pixel_index(
     x_min: float = -0.5,
     x_max: float = 0.5,
     shape: int = 120,
-    lim: Tuple[float, float] = (-3, 3),
+    lim: Sequence[float] = (-3, 3),
     offset: int = 1,
 ):
     """
@@ -75,14 +78,17 @@ def get_start_end_pixel_index(
 def get_gaussian_fit(
     x: np.ndarray,
     y: np.ndarray,
-    f: Callable = gaussian_function,
-    bounds: Optional[Tuple] = ([-np.inf, 0, -np.inf], [np.inf, 0.5, np.inf]),
+    func: Callable[..., np.ndarray] = gaussian_function,
+    bounds: Optional[Tuple[Sequence[float], Sequence[float]]] = (
+        [-np.inf, 0, -np.inf],
+        [np.inf, 0.5, np.inf],
+    ),
     print_info: bool = True,
 ):
     """
     get the Gaussian fit of the given data
     """
-    fit_res = fit_func(x, y, f, bounds=bounds)
+    fit_res = fit_func(x, y, func, bounds=bounds)
 
     if print_info:
         print("Gauss fit parameters a, sgima, c (and mu): %s" % fit_res[1])
@@ -92,11 +98,16 @@ def get_gaussian_fit(
 
 
 def fit_yprofile(
-    data, x_range=[-0.5, 0.5], xlim=[-3, 3], ylim=[-3, 3], show_fit=True, **kwargs
+    data: np.ndarray,
+    x_range: Sequence[float] = [-0.5, 0.5],
+    xlim: Sequence[float] = [-3, 3],
+    ylim: Sequence[float] = [-3, 3],
+    show_fit: bool = True,
+    **kwargs,
 ):
     """
     fit the y profile of the given data
-    
+
     Args:
         data: the data to fit
         x_range: the x range to be averaged along the x axis
@@ -104,7 +115,7 @@ def fit_yprofile(
         ylim: the y range of the data
         show_fit: whether to show the fit result
         **kwargs: the kwargs for the 'get_Gaussian_fit' function
-    
+
     Return:
         Tuple[y, yprofile, fit_y, para, cov]: the y axis, the y profile, \
             the fitted y profile, the parameters of the fitted function, \
@@ -118,7 +129,7 @@ def fit_yprofile(
 
     # fit the y_profile to estimate the width
     y_profile = np.mean(data_cut, axis=1)
-    yy = np.linspace(*ylim, sy)  # type: ignore
+    yy = np.linspace(*ylim, sy)  # pyright: ignore[reportCallIssue]
     fit_y, para, cov = get_gaussian_fit(yy, y_profile, **kwargs)
 
     if show_fit:
@@ -236,7 +247,7 @@ def get_signal_level(
     tbg = np.mean(clrb[-1], axis=0)
 
     # get the x axis
-    xx = np.linspace(*x_range, x_num) # type: ignore
+    xx = np.linspace(*x_range, x_num)  # pyright: ignore[reportCallIssue]
 
     # create the line data
     line_x = [yy, yy, xx, xx]
