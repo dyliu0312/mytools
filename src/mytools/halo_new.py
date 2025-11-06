@@ -29,7 +29,7 @@ def get_coord(
         x-coordinate limits, by default (-3, 3)
     ylim : Sequence[float], optional
         y-coordinate limits, by default None (same as xlim)
-        
+
     Returns
     -------
     Tuple[np.ndarray, np.ndarray]
@@ -263,7 +263,9 @@ def yield_mask_data(
                 yield arg
 
 
-def print_fit_chi2(data, fit_data):
+def info_fitness(
+    data: np.ndarray, fit_data: np.ndarray, return_res: bool = True
+) -> Union[np.ndarray, None]:
     """
     print the goodness of fit for the given data and fit data
     """
@@ -273,6 +275,9 @@ def print_fit_chi2(data, fit_data):
     print("\nGoodness of fit:")
     print(f"Chi-squared: {chi2:.3f}")
     print(f"RMS residual: {np.sqrt(np.mean(residuals**2)):.3f}")
+
+    if return_res:
+        return residuals
 
 
 def halo_fit(
@@ -321,11 +326,16 @@ def halo_fit(
     r1 = get_r_theta(lc, coord)
     r2 = get_r_theta(rc, coord)
 
-    r1_ids = get_id_edge(r1, rbin_e) # pyright: ignore[reportArgumentType]
-    r2_ids = get_id_edge(r2, rbin_e) # pyright: ignore[reportArgumentType]
+    r1_ids = get_id_edge(r1, rbin_e)  # pyright: ignore[reportArgumentType]
+    r2_ids = get_id_edge(r2, rbin_e)  # pyright: ignore[reportArgumentType]
 
     m_data, m_weight, m_r1_ids, m_r2_ids = yield_mask_data(
-        data, weight, r1_ids, r2_ids, mask=mask, flat=True # pyright: ignore[reportArgumentType]
+        data,
+        weight,
+        r1_ids,
+        r2_ids,
+        mask=mask,
+        flat=True,  # pyright: ignore[reportArgumentType]
     )
 
     def get_fitmap(profile, r1_ids, r2_ids):
@@ -352,7 +362,7 @@ def halo_fit(
     if info_fit:
         # print(result)
         fit_map = get_fitmap(fit_paras, m_r1_ids, m_r2_ids)
-        print_fit_chi2(m_data, fit_map)
+        info_fitness(m_data, fit_map)
 
     if smooth_window > 1:
         fit_paras = smooth_profile(fit_paras, smooth_window)
