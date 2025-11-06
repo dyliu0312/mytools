@@ -2,59 +2,18 @@
 estimate the signal level
 """
 
-from typing import Callable, Optional, Sequence, Tuple
+from typing import Optional, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import curve_fit
+from astropy.modeling import fitting, models
+from astropy.stats import sigma_clip
 
 
 def get_int(x):
     """turn the float number to integer, using np.rint"""
     x = np.array(x)
     return np.rint(x).astype(int)
-
-
-def gaussian_function(
-    x: np.ndarray,
-    amp: Optional[float] = None,
-    sigma: float = 1,
-    c: Optional[float] = None,
-    mu: float = 0,
-):
-    """A simple Gaussian function"""
-
-    if amp is None:
-        amp = 1 / np.sqrt(2 * np.pi * sigma**2)
-    if c is None:
-        c = 0
-    return amp * np.exp(-((x - mu) ** 2) / (2 * sigma**2)) + c
-
-
-def fit_func(
-    x: np.ndarray,
-    y: np.ndarray,
-    func: Callable[..., np.ndarray],
-    bounds: Optional[Tuple[Sequence[float], Sequence[float]]] = None,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Fit a function to the given data using 'curve fit'.
-
-    This function is designed to be used as a helper function for the 'curve_fit' function from 'scipy.optimize'.
-
-    It takes the x and y data points, the function to fit, and optional bounds for the parameters.
-
-    The function returns the fitted y values, the parameters of the fitted function, and the covariance matrix of the parameters.
-    """
-
-    if bounds is not None:
-        para, cov, *_ = curve_fit(func, x, y, bounds=bounds)
-    else:
-        para, cov, *_ = curve_fit(func, x, y)
-
-    fit_y = func(x, *para)
-
-    return fit_y, para, cov
 
 
 def get_start_end_pixel_index(
@@ -78,23 +37,74 @@ def get_start_end_pixel_index(
 def get_gaussian_fit(
     x: np.ndarray,
     y: np.ndarray,
-    func: Callable[..., np.ndarray] = gaussian_function,
-    bounds: Optional[Tuple[Sequence[float], Sequence[float]]] = (
-        [-np.inf, 0, -np.inf],
-        [np.inf, 0.5, np.inf],
-    ),
+    sigma_clip_sigma: float = 3.0,
+    bounds: Optional[dict] = None,
     print_info: bool = True,
+    **kwargs,
 ):
     """
-    get the Gaussian fit of the given data
+    Get the Gaussian fit of the given data using astropy.modelling with sigma clipping.
+
+    Args:
+        x (np.ndarray): The x data.
+        y (np.ndarray): The y data.
+        sigma_clip_sigma (float, optional): The sigma for sigma clipping. Defaults to 3.0.
+        bounds (Optional[dict], optional): The bounds for the parameters. Defaults to None.
+        print_info (bool, optional): Whether to print the fit information. Defaults to True.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray, models.CompoundModel]:
+            The fitted y values, the parameters of the fitted function,
+            the covariance matrix of the parameters, and the fitted model.
     """
-    fit_res = fit_func(x, y, func, bounds=bounds)
+    # Sigma clipping on the data
+    clipped_data: np.ma.MaskedArray = sigma_clip(y, sigma=sigma_clip_sigma, masked=True)  # pyright: ignore[reportAssignmentType]
+    x_clipped = x[~clipped_data.mask]
+    y_clipped = clipped_data.data[~clipped_data.mask]
+
+    if len(x_clipped) < 3:  # Not enough points to fit for 3 parameters
+        print("Warning: Not enough data points to fit after sigma clipping.")
+        return np.zeros_like(x), np.array([0, 0, 0]), None, None
+
+    # Initial guess for the parameters
+    amp_init = np.max(y_clipped) - np.median(y_clipped)
+    stddev_init = (x_clipped.max() - x_clipped.min()) / 8.0  # A reasonable guess
+    c_init = np.median(y_clipped)
+
+    # Define the model: Gaussian + constant, with fixed mean=0
+    model_init = models.Gaussian1D(  # pyright: ignore[reportOperatorIssue]
+        amplitude=amp_init, mean=0, stddev=stddev_init
+    ) + models.Const1D(amplitude=c_init)
+    model_init.mean_0.fixed = True
+
+    # Apply bounds if provided
+    if bounds:
+        for param_name, bound_tuple in bounds.items():
+            param = getattr(model_init, param_name)
+            param.bounds = bound_tuple
+
+    # Fitter
+    fitter = fitting.LevMarLSQFitter()
+
+    # Fit the model to the clipped data
+    fitted_model = fitter(model_init, x_clipped, y_clipped, **kwargs)
+
+    # Get results
+    fit_y = fitted_model(x)
+    para = fitted_model.parameters
+    cov = None
+    if fitter.fit_info.get("param_cov") is not None:
+        cov = fitter.fit_info["param_cov"]
 
     if print_info:
-        print("Gauss fit parameters a, sgima, c (and mu): %s" % fit_res[1])
-        print("Gauss fit covariance of a, sgima, c (and mu): %s" % fit_res[2])
+        print("Parameter names:")
+        print(fitted_model.param_names)
+        print("Gauss fit parameters: %s" % list(para))
+        if cov is not None:
+            print("Gauss fit covariance: \n%s" % cov)
+        print(f"{np.sum(clipped_data.mask)} points clipped during sigma clipping.")
 
-    return fit_res
+    return fit_y, para, cov, fitted_model
 
 
 def fit_yprofile(
@@ -129,12 +139,25 @@ def fit_yprofile(
 
     # fit the y_profile to estimate the width
     y_profile = np.mean(data_cut, axis=1)
-    yy = np.linspace(*ylim, sy)  # pyright: ignore[reportCallIssue]
-    fit_y, para, cov = get_gaussian_fit(yy, y_profile, **kwargs)
+    yy = np.linspace(*ylim, num=sy)
+
+    # Default bounds for astropy fitting
+    bounds = {
+        "amplitude_0": (-np.inf, np.inf),  # amp > 0
+        "stddev_0": (0, 0.5),  # sigma
+    }
+
+    # Update with any user-provided bounds
+    if "bounds" in kwargs:
+        bounds.update(kwargs["bounds"])
+
+    kwargs["bounds"] = bounds
+
+    fit_y, para, cov, _ = get_gaussian_fit(yy, y_profile, **kwargs)
 
     if show_fit:
-        plt.plot(y_profile, "bo--", label="y profile")
-        plt.plot(fit_y, "r-", label="Gaussian fit")
+        plt.plot(yy, y_profile, "bo--", label="y profile")
+        plt.plot(yy, fit_y, "r-", label="Gaussian fit")
         plt.legend()
 
     return yy, y_profile, fit_y, para, cov
@@ -240,7 +263,10 @@ def get_signal_level(
     )
 
     # get the center, left, right and background
-    clrb = get_center_outer_background(data, paras[1], x_range, xlim, ylim, shift_unit)
+    # With mean fixed, paras are [amplitude_0, x_mean_0, stddev_0, amplitude_1]
+    # width is stddev_0, which is paras[2]
+    width = paras[2] if paras is not None else 0.1
+    clrb = get_center_outer_background(data, width, x_range, xlim, ylim, shift_unit)
 
     # get the filament signal level and background level
     tf = np.mean(clrb[0], axis=0)
