@@ -1486,7 +1486,7 @@ def save_plot(
 
 
 def plot_line_diff(
-    *args: Union[Sequence[float], np.ndarray],
+    *args: Union[List[float], np.ndarray],
     axes: Optional[List[Axes]] = None,
     kw_line1: Optional[dict] = None,
     kw_line2: Optional[dict] = None,
@@ -1530,14 +1530,12 @@ def plot_line_diff(
         raise ValueError("Two lines are required at least.")
     elif length == 2:
         y1, y2 = args
-        # Ensure arrays and check length consistency
-        y1, y2 = np.array(y1), np.array(y2)
+        # check length consistency
         if len(y1) != len(y2):
             raise ValueError("y1 and y2 must have the same length")
         x = np.arange(len(y1))
     elif length == 3:
         x, y1, y2 = args
-        x, y1, y2 = np.array(x), np.array(y1), np.array(y2)
         if not (len(x) == len(y1) == len(y2)):
             raise ValueError("x, y1, and y2 must have the same length")
     else:
@@ -1572,6 +1570,10 @@ def plot_line_diff(
         dkw_diff.update(kw_diff)
 
     # Calculate difference
+    if isinstance(y1, list):
+        y1 = np.array(y1)
+    if isinstance(y2, list):
+        y2 = np.array(y2)
     diff = y1 - y2
 
     # Plot lines
