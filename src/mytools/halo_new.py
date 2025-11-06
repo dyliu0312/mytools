@@ -7,8 +7,9 @@ This script is an optimized version of mytools/halo.py for more robust and flexi
 from typing import Callable, Generator, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from scipy.ndimage import gaussian_filter, uniform_filter, uniform_filter1d
 from scipy.optimize import least_squares
-from scipy.ndimage import uniform_filter1d, gaussian_filter, uniform_filter
+
 from mytools.bins import get_id_edge
 
 
@@ -332,8 +333,8 @@ def halo_fit(
     m_data, m_weight, m_r1_ids, m_r2_ids = yield_mask_data(
         data,
         weight,
-        r1_ids,
-        r2_ids,
+        r1_ids,  # pyright: ignore[reportArgumentType]
+        r2_ids,  # pyright: ignore[reportArgumentType]
         mask=mask,
         flat=True,  # pyright: ignore[reportArgumentType]
     )

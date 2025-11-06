@@ -3,7 +3,16 @@ Functions to plot the stack results.
 
 """
 
-from typing import Any, Iterable, List, Literal, Optional, Sequence, Tuple, Union  # pyright: ignore[reportDeprecated]
+from typing import (
+    Any,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1474,3 +1483,127 @@ def save_plot(
     print(f"Plot saved to {filename}")
 
     return None
+
+
+def plot_line_diff(
+    *args: Union[Sequence[float], np.ndarray],
+    axes: Optional[List[Axes]] = None,
+    kw_line1: Optional[dict] = None,
+    kw_line2: Optional[dict] = None,
+    kw_diff: Optional[dict] = None,
+    labels: Optional[Sequence[str]] = None,
+    xlabel: Optional[str] = "X",
+    ylabel: Optional[str] = "Y",
+    ylabel2: Optional[str] = "Difference",
+    title: Optional[str] = None,
+    figsize: Tuple[float, float] = (4, 4),
+    grid: bool = True,
+) -> List[Axes]:
+    """
+    Compare two lines and plot the difference.
+
+    Parameters:
+    -----------
+    *args : x, y1, y2 or y1, y2
+        Either three arrays (x, y1, y2) or two arrays (y1, y2)
+    axes : list of matplotlib Axes, optional
+        Existing axes to plot on
+    kw_line1, kw_line2, kw_diff : dict, optional
+        Keyword arguments for matplotlib plot function for each line
+    labels : tuple of str, optional
+        Labels for the two lines (for legend)
+    xlabel, ylabel : str, optional
+        Axis labels
+    diff_label : str, optional
+        Label for the difference line
+    show_legend : bool
+        Whether to show legends
+    grid : bool
+        Whether to show grid
+
+    Returns:
+    --------
+    list of matplotlib Axes
+    """
+    # Input validation
+    if (length := len(args)) == 1:
+        raise ValueError("Two lines are required at least.")
+    elif length == 2:
+        y1, y2 = args
+        # Ensure arrays and check length consistency
+        y1, y2 = np.array(y1), np.array(y2)
+        if len(y1) != len(y2):
+            raise ValueError("y1 and y2 must have the same length")
+        x = np.arange(len(y1))
+    elif length == 3:
+        x, y1, y2 = args
+        x, y1, y2 = np.array(x), np.array(y1), np.array(y2)
+        if not (len(x) == len(y1) == len(y2)):
+            raise ValueError("x, y1, and y2 must have the same length")
+    else:
+        raise ValueError("Too many arguments. Expected 2 or 3 arrays.")
+
+    # Create axes if not provided
+    if axes is None:
+        # _, axes = make_figure(2, 1, figsize=(4, 6), hspace=0, wspace=0, sharex=True, sharey=False, aspect=None)
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(
+            6,
+            4,
+            hspace=0.0,
+        )
+        ax = fig.add_subplot(gs[0:4, 0:4])
+        ax2 = fig.add_subplot(gs[4:6, 0:4], sharex=ax)
+        axes = [ax, ax2]
+    if axes is None:
+        raise ValueError("Failed to create axes.")
+
+    # Set default plotting parameters
+    dkw_line1 = {"marker": "o", "linestyle": "", "color": "blue"}
+    dkw_line2 = {"marker": "", "linestyle": "--", "color": "red"}
+    dkw_diff = {"marker": "s", "linestyle": "-", "color": "black"}
+
+    # Update with user provided parameters
+    if kw_line1 is not None:
+        dkw_line1.update(kw_line1)
+    if kw_line2 is not None:
+        dkw_line2.update(kw_line2)
+    if kw_diff is not None:
+        dkw_diff.update(kw_diff)
+
+    # Calculate difference
+    diff = y1 - y2
+
+    # Plot lines
+    line1 = axes[0].plot(x, y1, **dkw_line1)  # pyright: ignore[reportArgumentType]
+    line2 = axes[0].plot(x, y2, **dkw_line2)  # pyright: ignore[reportArgumentType]
+
+    # Plot difference
+    linediff = axes[1].plot(x, diff, **dkw_diff)  # pyright: ignore[reportArgumentType]
+
+    # Add labels if provided
+    if labels is not None:
+        axes[0].legend([line1[0], line2[0]], labels[:2])
+        axes[1].legend([linediff[0]], [labels[-1]])
+
+    # Set axis labels
+    if xlabel:
+        axes[1].set_xlabel(xlabel)
+    if ylabel:
+        axes[0].set_ylabel(ylabel)
+    if ylabel2:
+        axes[1].set_ylabel(ylabel2)
+
+    # Add grid
+    if grid:
+        axes[0].grid(True, alpha=0.3)
+        axes[1].grid(True, alpha=0.3)
+
+    # Add zero reference line to difference plot
+    axes[1].axhline(y=0, color="gray", linestyle="--")
+
+    # Set title
+    if title:
+        axes[0].set_title(title)
+
+    return axes
