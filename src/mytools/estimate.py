@@ -5,7 +5,6 @@ estimate the signal level
 from typing import Optional, Sequence
 
 import numpy as np
-from astropy.coordinates.spectral_quantity import si
 from astropy.modeling import fitting, models
 from astropy.stats import sigma_clip
 
