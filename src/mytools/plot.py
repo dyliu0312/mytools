@@ -1494,7 +1494,7 @@ def plot_line_diff(
     labels: Optional[Sequence[str]] = None,
     xlabel: Optional[str] = "X",
     ylabel: Optional[str] = "Y",
-    ylabel2: Optional[str] = "Difference",
+    ylabel2: Optional[str] = None,
     title: Optional[str] = None,
     figsize: Tuple[float, float] = (4, 4),
     grid: bool = True,
@@ -1507,17 +1507,22 @@ def plot_line_diff(
     *args : x, y1, y2 or y1, y2
         Either three arrays (x, y1, y2) or two arrays (y1, y2)
     axes : list of matplotlib Axes, optional
-        Existing axes to plot on
+        Existing axes to plot on. Defaults to None to create new axes.
     kw_line1, kw_line2, kw_diff : dict, optional
-        Keyword arguments for matplotlib plot function for each line
+        Keyword arguments for matplotlib plot function for each line. Defaults are:
+        - line1: marker='o', linestyle='', color='blue'
+        - line2: marker='', linestyle='--', color='red'
+        - diff: marker='s', linestyle='-', color='black'
     labels : tuple of str, optional
-        Labels for the two lines (for legend)
+        Labels for the three lines. Defaults to None.
     xlabel, ylabel : str, optional
         Axis labels
-    diff_label : str, optional
-        Label for the difference line
-    show_legend : bool
-        Whether to show legends
+    ylable2 : str, optional
+        Label for the second y-axis. Defaults to None to use the same as ylabel.
+    title : str, optional
+        Title of the plot
+    figsize : tuple of float, optional
+        Figure size. Defaults to (4, 4).
     grid : bool
         Whether to show grid
 
@@ -1593,6 +1598,7 @@ def plot_line_diff(
         axes[1].set_xlabel(xlabel)
     if ylabel:
         axes[0].set_ylabel(ylabel)
+        ylabel2 = ylabel if ylabel2 is None else ylabel2
     if ylabel2:
         axes[1].set_ylabel(ylabel2)
 
