@@ -8,6 +8,7 @@ import numpy as np
 from astropy.modeling import fitting, models
 from astropy.stats import sigma_clip
 
+from mytools.halo_new import info_fitness
 from mytools.plot import plot_line_diff
 
 
@@ -117,6 +118,7 @@ def get_gaussian_fit(
         if cov is not None:
             print("Gauss fit covariance: \n%s" % cov)
         print(f"{np.sum(clipped_data.mask)} points clipped during sigma clipping.")
+        info_fitness(y, fit_y, 3)
 
     return fit_y, para, cov, fitted_model
 

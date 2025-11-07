@@ -265,7 +265,10 @@ def yield_mask_data(
 
 
 def info_fitness(
-    data: np.ndarray, fit_data: np.ndarray, return_res: bool = True
+    data: np.ndarray,
+    fit_data: np.ndarray,
+    n_params: int,
+    return_res: bool = False,
 ) -> Union[np.ndarray, None]:
     """
     print the goodness of fit for the given data and fit data
@@ -273,9 +276,13 @@ def info_fitness(
     # Calculate goodness of fit
     residuals = data - fit_data
     chi2 = np.sum(residuals**2)
+    dof = data.size - n_params
+    reduced_chi2 = chi2 / dof if dof > 0 else np.inf
+
     print("\nGoodness of fit:")
     print(f"Chi-squared: {chi2:.3f}")
-    print(f"RMS residual: {np.sqrt(np.mean(residuals**2)):.3f}")
+    print(f"Reduced chi-squared: {reduced_chi2:.3f}")
+    print(f"RMS residual: {np.sqrt(np.mean(residuals**2)):.3f}\n")
 
     if return_res:
         return residuals
@@ -363,7 +370,7 @@ def halo_fit(
     if info_fit:
         # print(result)
         fit_map = get_fitmap(fit_paras, m_r1_ids, m_r2_ids)
-        info_fitness(m_data, fit_map)
+        info_fitness(m_data, fit_map, num_bins)
 
     if smooth_window > 1:
         fit_paras = smooth_profile(fit_paras, smooth_window)
