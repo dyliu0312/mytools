@@ -120,6 +120,7 @@ def fit_yprofile(
     xlim: Sequence[float] = [-3, 3],
     ylim: Sequence[float] = [-3, 3],
     show_fit: bool = True,
+    weights: Optional[np.ndarray] = None,
     **kwargs,
 ):
     """
@@ -131,6 +132,7 @@ def fit_yprofile(
         xlim: the x range of the data
         ylim: the y range of the data
         show_fit: whether to show the fit result
+        weights: the weights for the data
         **kwargs: the kwargs for the 'get_Gaussian_fit' function
 
     Return:
@@ -148,6 +150,16 @@ def fit_yprofile(
     y_profile = np.mean(data_cut, axis=1)
     yy = np.linspace(*ylim, num=sy)
 
+    # get weights for y_profile fitting
+    fit_weights = None
+    if weights is not None:
+        if weights.shape != data.shape:
+            raise ValueError(
+                f"Shape of weights {weights.shape} must match shape of data {data.shape}."
+            )
+        weights_cut = weights[:, x_st:x_ed]
+        fit_weights = np.mean(weights_cut, axis=1)
+
     # Default bounds for astropy fitting
     bounds = {
         "amplitude_0": (-np.inf, np.inf),  # amp > 0
@@ -160,7 +172,7 @@ def fit_yprofile(
 
     kwargs["bounds"] = bounds
 
-    fit_y, para, cov, _ = get_gaussian_fit(yy, y_profile, **kwargs)
+    fit_y, para, cov, _ = get_gaussian_fit(yy, y_profile, weights=fit_weights, **kwargs)
 
     if show_fit:
         plt.plot(yy, y_profile, "bo--", label="y profile")
@@ -235,6 +247,7 @@ def get_center_outer_background(
 
 def get_signal_level(
     data,
+    weights: Optional[np.ndarray] = None,
     x_range=[-0.5, 0.5],
     x_num=20,
     xlim=[-3, 3],
@@ -248,6 +261,7 @@ def get_signal_level(
 
     Args:
         data (np.ndarray): the data to be fitted
+        weights (Optional[np.ndarray], optional): The weights for the fitting. Defaults to None.
         x_range (List[float]): the x range to be fitted
         x_num (int): the number points of x axis
         xlim (List[float]): the x limit of the data
@@ -266,7 +280,7 @@ def get_signal_level(
 
     # fit the y profile
     yy, yprofile, yfit, paras, cov = fit_yprofile(
-        data, x_range, xlim, ylim, show_fit, **kwargs
+        data, x_range, xlim, ylim, show_fit, weights=weights, **kwargs
     )
 
     # get the center, left, right and background
