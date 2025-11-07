@@ -4,7 +4,6 @@ estimate the signal level
 
 from typing import Optional, Sequence
 
-import matplotlib.pyplot as plt
 import numpy as np
 from astropy.modeling import fitting, models
 from astropy.stats import sigma_clip
