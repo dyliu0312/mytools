@@ -37,6 +37,7 @@ def get_start_end_pixel_index(
 def get_gaussian_fit(
     x: np.ndarray,
     y: np.ndarray,
+    weights: Optional[np.ndarray] = None,
     sigma_clip_sigma: float = 3.0,
     bounds: Optional[dict] = None,
     print_info: bool = True,
@@ -48,6 +49,7 @@ def get_gaussian_fit(
     Args:
         x (np.ndarray): The x data.
         y (np.ndarray): The y data.
+        weights (Optional[np.ndarray], optional): The weights for the fitting. Defaults to None.
         sigma_clip_sigma (float, optional): The sigma for sigma clipping. Defaults to 3.0.
         bounds (Optional[dict], optional): The bounds for the parameters. Defaults to None.
         print_info (bool, optional): Whether to print the fit information. Defaults to True.
@@ -61,6 +63,9 @@ def get_gaussian_fit(
     clipped_data: np.ma.MaskedArray = sigma_clip(y, sigma=sigma_clip_sigma, masked=True)  # pyright: ignore[reportAssignmentType]
     x_clipped = x[~clipped_data.mask]
     y_clipped = clipped_data.data[~clipped_data.mask]
+    weights_clipped = None
+    if weights is not None:
+        weights_clipped = weights[~clipped_data.mask]
 
     if len(x_clipped) < 3:  # Not enough points to fit for 3 parameters
         print("Warning: Not enough data points to fit after sigma clipping.")
@@ -87,7 +92,9 @@ def get_gaussian_fit(
     fitter = fitting.LevMarLSQFitter()
 
     # Fit the model to the clipped data
-    fitted_model = fitter(model_init, x_clipped, y_clipped, **kwargs)
+    fitted_model = fitter(
+        model_init, x_clipped, y_clipped, weights=weights_clipped, **kwargs
+    )
 
     # Get results
     fit_y = fitted_model(x)
