@@ -5,6 +5,7 @@ estimate the signal level
 from typing import Optional, Sequence
 
 import numpy as np
+from astropy.coordinates.spectral_quantity import si
 from astropy.modeling import fitting, models
 from astropy.stats import sigma_clip
 
@@ -39,7 +40,7 @@ def get_gaussian_fit(
     x: np.ndarray,
     y: np.ndarray,
     weights: Optional[np.ndarray] = None,
-    sigma_clip_sigma: float = 3.0,
+    sigma_clip_sigma: Optional[float] = None,
     bounds: Optional[dict] = None,
     print_info: bool = True,
     **kwargs,
@@ -61,7 +62,13 @@ def get_gaussian_fit(
             the covariance matrix of the parameters, and the fitted model.
     """
     # Sigma clipping on the data
-    clipped_data: np.ma.MaskedArray = sigma_clip(y, sigma=sigma_clip_sigma, masked=True)  # pyright: ignore[reportAssignmentType]
+    if sigma_clip_sigma is not None:
+        clipped_data: np.ma.MaskedArray = sigma_clip(
+            y, sigma=sigma_clip_sigma, masked=True
+        )  # pyright: ignore[reportAssignmentType]
+    else:
+        clipped_data = np.ma.array(y, mask=False)
+
     x_clipped = x[~clipped_data.mask]
     y_clipped = clipped_data.data[~clipped_data.mask]
     weights_clipped = None
@@ -122,6 +129,7 @@ def fit_yprofile(
     ylim: Sequence[float] = [-3, 3],
     show_fit: bool = True,
     weights: Optional[np.ndarray] = None,
+    sigma_clip_sigma: Optional[float] = None,
     **kwargs,
 ):
     """
@@ -134,6 +142,7 @@ def fit_yprofile(
         ylim: the y range of the data
         show_fit: whether to show the fit result
         weights: the weights for the data
+        sigma_clip_sigma: the sigma for sigma clipping
         **kwargs: the kwargs for the 'get_Gaussian_fit' function
 
     Return:
@@ -173,7 +182,9 @@ def fit_yprofile(
 
     kwargs["bounds"] = bounds
 
-    fit_y, para, cov, _ = get_gaussian_fit(yy, y_profile, weights=fit_weights, **kwargs)
+    fit_y, para, cov, _ = get_gaussian_fit(
+        yy, y_profile, weights=fit_weights, sigma_clip_sigma=sigma_clip_sigma, **kwargs
+    )
 
     if show_fit:
         _ = plot_line_diff(
@@ -260,6 +271,7 @@ def get_signal_level(
     ylim=[-3, 3],
     shift_unit=2,
     show_fit=True,
+    sigma_clip_sigma: Optional[float] = None,
     **kwargs,
 ):
     """
@@ -274,6 +286,7 @@ def get_signal_level(
         ylim (List[float]): the y limit of the data
         shift_unit (int): the shift unit of the outer region
         show_fit (bool): whether to plot the fit result
+        sigma_clip_sigma (Optional[float], optional): the sigma clip sigma for the fitting. Defaults to None.
         **kwargs (dict): the parameters for the `get_Gaussian fit`
     Returns:
         Tuple[List]:
@@ -286,7 +299,14 @@ def get_signal_level(
 
     # fit the y profile
     yy, yprofile, yfit, paras, cov = fit_yprofile(
-        data, x_range, xlim, ylim, show_fit, weights=weights, **kwargs
+        data,
+        x_range,
+        xlim,
+        ylim,
+        show_fit,
+        weights=weights,
+        sigma_clip_sigma=sigma_clip_sigma,
+        **kwargs,
     )
 
     # get the center, left, right and background
