@@ -9,6 +9,8 @@ import numpy as np
 from astropy.modeling import fitting, models
 from astropy.stats import sigma_clip
 
+from mytools.plot import plot_line_diff
+
 
 def get_int(x):
     """turn the float number to integer, using np.rint"""
@@ -175,9 +177,14 @@ def fit_yprofile(
     fit_y, para, cov, _ = get_gaussian_fit(yy, y_profile, weights=fit_weights, **kwargs)
 
     if show_fit:
-        plt.plot(yy, y_profile, "bo--", label="y profile")
-        plt.plot(yy, fit_y, "r-", label="Gaussian fit")
-        plt.legend()
+        _ = plot_line_diff(
+            yy,
+            y_profile,
+            fit_y,
+            labels=["Y-profile", "Gaussian fit", "residual"],
+            xlabel="Y",
+            ylabel=r"T [$\mu$K]",
+        )
 
     return yy, y_profile, fit_y, para, cov
 
