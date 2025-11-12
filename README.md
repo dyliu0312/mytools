@@ -1,5 +1,8 @@
-# Description
-This is a collection of python tools used in my work on [HI filament stacking simulation](https://arxiv.org/abs/2411.03988), including utilities for data processing, plotting, and calculations. 
+# Mytools
+![](example/img_tngcube_stack_fit_res.png)
+
+## Description
+This is a collection of python tools used in my work on [HI filament stacking simulation](https://arxiv.org/abs/2411.03988), including utilities for data processing, plotting, and calculations.
 
 The code is organized into several modules, each with its own specific functionality.
 The main modules are:
@@ -8,7 +11,9 @@ The main modules are:
 * ```constant.py       ```: defined some constants for 21cm astronomy (rest_frequency...),
 * ```calculation.py    ```: to calculate some quantities (beamsize, sensitivity...),
 * ```stack.py          ```: to aid the stacking procedure,
-* ```halo.py           ```: to finish halo component fiting and subtraction,
+* ```halo.py           ```: to finish halo component fiting and subtraction (**original** code used in paper),
+* ```halo_new.py       ```: optimised version of halo-contriubiton subtraction (**recommanded**),
+* ```utils.py          ```: utilities for fiting (get coodinates, mask...),
 * ```estimate.py       ```: to estimate the signal level,
 * ```bins.py           ```: helper functions for bins.
 
@@ -17,10 +22,10 @@ There are also useful scripts in the [scripts](scripts) folder:
 * ```pair_stack.py     ```: to run the galaxy pairwise stacking.
 * ```find_fuzzy_par.py ```: to find the indices of inner fuzzy particles for filament only map construction.
 
-# Install
+## Install
 You can simply git clone this repository and and install it with ```pip install .```
 
-Or directly use: 
+Or directly use:
 ```sh
 pip install git+https://github.com/dyliu0312/mytools.git
 ```
@@ -37,18 +42,20 @@ Optional:
 * [tqdm](https://github.com/tqdm/tqdm) (for [pair_stack.py](scripts/pair_stack.py) script)
 * [illustris_python](https://github.com/illustristng/illustris_python.git) (for [find_fuzzy_par.py](scripts/find_fuzzy_par.py) script)
 
-# Usage
+## Usage
 
 After installing, you can use the functions in the modules, for example:
 ```py
 from mytools.calculation import freq2z, u
 freq2z(1.3*u.GHz)
 ```
-# Notes
-The example Jupyter notebooks are in the [test](test) folder.
+## Notes
+1. The example Jupyter notebook for **filament signal estimation** is in the [example](example) folder.
+
+2. Other example Jupyter notebooks for **functionality usage** are in the [test](test) folder.
 
 
-**If you want to run the ```pair_stack.py``` script, please see and modify the example parameters set in the [pair_stack.sh](slurm/pair_stack.sh) file.**
+3. To run the [```pair_stack.py```](scripts/pair_stack.py) script, please **see and modify** the example parameters set in the [pair_stack.sh](slurm/pair_stack.sh) file.
 
 Have fun!
 
