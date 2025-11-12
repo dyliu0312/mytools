@@ -20,6 +20,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import LogNorm, Normalize, SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.patches import Arc, Ellipse
+from numpy.typing import NDArray
 
 
 def arg_list(arg: Any, n: int = 1, m: Optional[int] = None) -> List[Any]:
@@ -47,7 +48,7 @@ def arg_list(arg: Any, n: int = 1, m: Optional[int] = None) -> List[Any]:
     return arg
 
 
-def get_minmax(data: np.ndarray, q: float = 5) -> np.ndarray:
+def get_minmax(data: NDArray, q: float = 5) -> NDArray:
     """
     get the min and max values of data with percentile.
     """
@@ -254,7 +255,7 @@ def plot_heatmap(
     show_cbar: bool = True,
     cbar_ax: Optional[Axes] = None,
     cbar_loc: Literal["right", "top", "bottom"] = "right",
-    cbar_label: Optional[str] = r"T[$\mu$K]",
+    cbar_label: Optional[str] = r"$T\,[\mu$K]",
     title: Optional[str] = "Heatmap",
     xlabel: Optional[str] = "X",
     ylabel: Optional[str] = "Y",
@@ -388,7 +389,7 @@ def plot_heatmap(
 
 
 def plot_heatmaps(
-    data: List[np.ndarray],
+    data: List[NDArray],
     axes: Optional[List[Axes]] = None,
     cmap: Union[str, List[str]] = "viridis",
     norm: Union[str, List[str]] = "linear",
@@ -398,7 +399,7 @@ def plot_heatmaps(
     tick_in: bool = True,
     show_cbar: Union[bool, List[bool]] = True,
     cbar_loc: Literal["right", "top", "bottom"] = "right",
-    cbar_label: Union[str, List[str], None] = r"T[$\mu$K]",
+    cbar_label: Union[str, List[str], None] = r"$T\,[\mu$K]",
     title: Union[str, List[str], None] = None,
     xlabel: Union[str, List[str]] = "X",
     ylabel: Union[str, List[str]] = "Y",
@@ -417,7 +418,7 @@ def plot_heatmaps(
         If an arg is not a list, it will be converted to a list with arg be repeated.
 
     Args:
-        data: list of np.ndarray, the data to plot.
+        data: list of NDArray, the data to plot.
         axes: list of matplotlib.axes.Axes.
         cmap: str or a list of str, the colormap.
         norm: matplotlib.color.norm or str or a list of norm.
@@ -490,7 +491,7 @@ def plot_heatmaps(
 
 
 def plot_stack_fit_res(
-    data: List[np.ndarray],
+    data: List[NDArray],
     axes: Optional[List[Axes]] = None,
     cmap: Union[str, List[str]] = ["viridis", "viridis", "RdBu_r"],
     norm: Union[str, List[str]] = "linear",
@@ -498,7 +499,7 @@ def plot_stack_fit_res(
     vmax: Union[float, List[float], None] = None,
     q: float = 5,
     show_cbar: bool = True,
-    cbar_label: Union[str, List[str]] = r"T[$\mu$K]",
+    cbar_label: Union[str, List[str]] = r"$T\,[\mu$K]",
     kw_makefigure: Optional[dict] = dict(sharey=True),  # pyright: ignore[reportMissingTypeArgument]
     title: Union[str, List[str]] = [
         "Pairwise-stacked map",
@@ -507,7 +508,7 @@ def plot_stack_fit_res(
     ],
     xlabel: Union[str, List[str]] = "X",
     ylabel: Union[str, List[str]] = "Y",
-    fit_mask: Optional[np.ndarray] = None,
+    fit_mask: Optional[NDArray] = None,
     alpha: float = 0.15,
 ) -> List[Axes]:
     """
@@ -545,7 +546,7 @@ def plot_stack_fit_res(
 
 
 def plot_res(
-    data: List[np.ndarray],
+    data: List[NDArray],
     axes: Optional[List[Axes]] = None,
     norm: Union[str, List[str]] = "linear",
     vmin: Union[float, List[float]] = -10,
@@ -555,7 +556,7 @@ def plot_res(
     show_cbar: Union[bool, List[bool]] = [False, True],
     cmap: Union[str, List[str]] = "viridis",
     cbar_loc: str = "right",
-    cbar_label: Union[str, List[str]] = r"T[$\mu$K]",
+    cbar_label: Union[str, List[str]] = r"$T\,[\mu$K]",
     title: Union[str, List[str]] = ["HI only", "HI + noise"],
     xlabel: Union[str, List[str]] = "X",
     ylabel: Union[str, List[str]] = "Y",
@@ -599,8 +600,8 @@ def plot_res(
 
 
 def plot_line(
-    x: List[Union[np.ndarray, Sequence[float]]],
-    y: List[Union[np.ndarray, Sequence[float]]],
+    x: List[Union[NDArray, Sequence[float]]],
+    y: List[Union[NDArray, Sequence[float]]],
     ax: Optional[Axes] = None,
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
@@ -683,15 +684,15 @@ def plot_line(
 
 
 def plot_profile_2c(
-    x: List[Union[np.ndarray, Sequence[float]]],
-    y: List[Union[np.ndarray, Sequence[float]]],
+    x: List[Union[NDArray, Sequence[float]]],
+    y: List[Union[NDArray, Sequence[float]]],
     cut: int = 2,
     axes: Optional[List[Axes]] = None,
-    text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
+    text_pos: List[List[float]] = [[-0.48, 10], [-0.5, 3], [-2.5, 10]],
     width: float = 0.32,
-    fontsize: Union[float, List[float]] = 14,
+    fontsize: Union[float, List[float]] = 12,
     xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
-    ylabel: Union[str, List[Union[str, None]], None] = [r"$T$[$\mu$K]", None],
+    ylabel: Union[str, List[Union[str, None]], None] = [r"$T\,[\mu$K]", None],
     title: Union[str, List[Union[str, None]], None] = [
         "Transverse-section profile",
         "Lengthwise-section profile",
@@ -717,7 +718,7 @@ def plot_profile_2c(
             e.g. cut=2 means the data points in the first two rows are plotted in the first subplot, \
                 and rest are plotted in the second subplot.
         axes (Axes, optional): axes object. Defaults to None.
-        text_pos (List[list]): text position. Defaults to [[-0.45, 0.6], [-0.45, -2], [-2, 0.6]] \
+        text_pos (List[list]): text position. Defaults to [[-0.48, 10], [-0.5, 3], [-2.5, 10]] \
             for filament, background and width.
         width (float): width of the filament to show on the left panel. Defaults to 0.32.
         fontsize (str): fontsize of the text. Defaults to 14.
@@ -739,7 +740,7 @@ def plot_profile_2c(
         _, axes = make_figure(
             1,
             2,
-            figsize=(6, 4),
+            figsize=(8, 3),
             sharey=True,
             sharex=False,
             wspace=0,
@@ -814,8 +815,8 @@ def plot_profile_2c(
 
 
 def plot_profile_2r(
-    x: List[List[Union[np.ndarray, Sequence[float]]]],
-    y: List[List[Union[np.ndarray, Sequence[float]]]],
+    x: List[List[Union[NDArray, Sequence[float]]]],
+    y: List[List[Union[NDArray, Sequence[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], List[Axes], None] = None,
     text_pos: List[List[float]] = [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]],
@@ -823,7 +824,7 @@ def plot_profile_2r(
     fontsize: Union[float, List[float]] = 14,
     title: Union[str, List[str], None] = None,
     xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
-    ylabel: Union[str, List[Union[str, None]], None] = r"T[$\mu$K]",
+    ylabel: Union[str, List[Union[str, None]], None] = r"$T\,[\mu$K]",
     color: Union[str, List[str], None] = None,
     marker: Union[str, List[str], None] = None,
     linestyle: Union[str, List[str]] = "--",
@@ -962,8 +963,8 @@ def plot_profile_2r(
 
 
 def plot_profile_2c2r(
-    x: List[List[Union[np.ndarray, Sequence[float]]]],
-    y: List[List[Union[np.ndarray, Sequence[float]]]],
+    x: List[List[Union[NDArray, Sequence[float]]]],
+    y: List[List[Union[NDArray, Sequence[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], None] = None,
     text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
@@ -971,9 +972,9 @@ def plot_profile_2c2r(
     fontsize: Union[float, List[float]] = [14.0] * 3,
     xlabel: Union[str, List[Union[str, None]], None] = [None, None, "Y", "X"],
     ylabel: Union[str, List[Union[str, None]], None] = [
-        r"$T$[$\mu$K] (HI only)",
+        r"$T\,[\mu$K] (HI only)",
         None,
-        r"$T$[$\mu$K] (HI + noise)",
+        r"$T\,[\mu$K] (HI + noise)",
         None,
     ],
     title: List[Union[str, None]] = [
@@ -1077,7 +1078,7 @@ def plot_profile_2c2r(
 
 
 def plot_hist(
-    data: List[np.ndarray],
+    data: List[NDArray],
     bins: Union[int, Sequence[float], str, None] = None,
     ax: Optional[Axes] = None,
     label: Union[str, List[Union[str, None]], None] = None,
@@ -1144,7 +1145,7 @@ def plot_hist(
 
 
 def plot_hist_2c(
-    data: List[np.ndarray],
+    data: List[NDArray],
     bins: Union[int, Sequence[float], str, None] = None,
     cut: int = 1,
     axes: Optional[List[Axes]] = None,
@@ -1211,7 +1212,7 @@ def plot_hist_2c(
 
 
 def plot_hist_result(
-    data: List[np.ndarray],
+    data: List[NDArray],
     bins: Union[int, Sequence[float], str, None] = None,
     cut: int = 4,
     axes: Optional[List[Axes]] = None,
@@ -1221,7 +1222,7 @@ def plot_hist_result(
     density: Union[bool, List[bool]] = True,
     histtype: Union[str, List[str]] = "step",
     title: Union[str, List[Union[str, None]], None] = ["HI only", "HI + noise"],
-    xlabel: Union[str, List[Union[str, None]], None] = r"$T$[$\mu$K]",
+    xlabel: Union[str, List[Union[str, None]], None] = r"$T\,[\mu$K]",
     ylabel: Union[str, List[Union[str, None]], None] = ["PDF", None],
     **kwargs,
 ) -> List[Axes]:
@@ -1388,7 +1389,7 @@ def plot_sector(
 
 
 def plot_axlines(
-    ax: Union[Axes, Sequence[Axes], np.ndarray],
+    ax: Union[Axes, Sequence[Axes], NDArray],
     vl: Union[float, Iterable[float], None] = None,
     hl: Union[float, Iterable[float], None] = None,
     color: str = "r",
@@ -1448,7 +1449,7 @@ def plot_axlines(
 
 
 def save_plot(
-    plot_obj: Union[Figure, Axes, Sequence[Axes], np.ndarray],
+    plot_obj: Union[Figure, Axes, Sequence[Axes], NDArray],
     filename: str,
     dpi: int = 100,
     bbox_inches: str = "tight",
@@ -1486,14 +1487,14 @@ def save_plot(
 
 
 def plot_line_diff(
-    *args: Union[List[float], np.ndarray],
+    *args: Union[List[float], NDArray],
     axes: Optional[List[Axes]] = None,
     kw_line1: Optional[dict] = None,
     kw_line2: Optional[dict] = None,
     kw_diff: Optional[dict] = None,
     labels: Optional[Sequence[str]] = None,
     xlabel: Optional[str] = None,
-    ylabel: Optional[str] = None,
+    ylabel: Optional[str] = r"$T\,[\mu$K]",
     ylabel2: Optional[str] = None,
     title: Optional[str] = None,
     figsize: Tuple[float, float] = (4, 4),
@@ -1548,16 +1549,17 @@ def plot_line_diff(
 
     # Create axes if not provided
     if axes is None:
-        # _, axes = make_figure(2, 1, figsize=(4, 6), hspace=0, wspace=0, sharex=True, sharey=False, aspect=None)
-        fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(
-            6,
-            4,
-            hspace=0.0,
+        _, axes = make_figure(
+            2,
+            1,
+            figsize=figsize,
+            hspace=0,
+            wspace=0,
+            sharex=True,
+            sharey=False,
+            aspect=None,
+            gridspec_kw={"height_ratios": [2, 1]},
         )
-        ax = fig.add_subplot(gs[0:4, 0:4])
-        ax2 = fig.add_subplot(gs[4:6, 0:4], sharex=ax)
-        axes = [ax, ax2]
     if axes is None:
         raise ValueError("Failed to create axes.")
 
@@ -1590,15 +1592,20 @@ def plot_line_diff(
 
     # Add labels if provided
     if labels is not None:
-        axes[0].legend([line1[0], line2[0]], labels[:2])
-        axes[1].legend([linediff[0]], [labels[-1]])
+        if len(labels) == 2:
+            axes[0].legend([line1[0], line2[0]], labels)
+        elif len(labels) == 3:
+            axes[0].legend([line1[0], line2[0]], labels[:-1])
+            axes[1].legend([linediff[0]], [labels[-1]])
+        else:
+            raise ValueError("labels must have length 2 or 3")
 
     # Set axis labels
     if xlabel:
         axes[1].set_xlabel(xlabel)
     if ylabel:
         axes[0].set_ylabel(ylabel)
-        ylabel2 = ylabel if ylabel2 is None else ylabel2
+        ylabel2 = r"$\Delta$" + ylabel if ylabel2 is None else ylabel2
     if ylabel2:
         axes[1].set_ylabel(ylabel2)
 
@@ -1613,5 +1620,90 @@ def plot_line_diff(
     # Set title
     if title:
         axes[0].set_title(title)
+
+    return axes
+
+
+def compare_profiles(
+    data_list: List[NDArray],
+    hinds: List[int] = [60],
+    vinds: List[int] = [40, 80],
+    titles: Optional[List[str]] = ["Y=0", "X=-1", "X=1"],
+    axes: Optional[NDArray] = None,
+    figsize: Tuple[float, float] = (12, 4),
+    label_outer: bool = True,
+    labels: List[str] = ["Stacked", "Fitted"],
+    **kwargs,
+) -> NDArray:
+    """
+    Compare datasets by plotting their horizontal and vertical profiles.
+
+    This function uses `plot_line_diff` to create plots comparing horizontal
+    and vertical slices of the datasets provided in `data_list`.
+
+    Args:
+        data_list (List[NDArray]): A list of numpy arrays to compare.
+            Typically, this would be a list of two arrays, e.g., [data1, data2].
+        hinds (List[int]): A list of indices for horizontal profiles (Y profiles).
+        vinds (List[int]): A list of indices for vertical profiles (X profiles).
+        titles (Optional[List[str]]): Titles for the profile plots. The number
+            of titles should match the total number of profiles (len(hinds) + len(vinds)).
+        axes (Optional[NDArray]): Existing axes to plot on. Should be a
+            NumPy array of shape (2, n_plots), where n_plots is the total
+            number of profiles. If None, new axes are created. Defaults to None.
+        figsize (Tuple[float, float]): Figure size for the entire figure if
+            axes are not provided. Defaults to (12, 4).
+        label_outer (bool): If True, only show outer labels and tick labels.
+            Defaults to True.
+        labels (List[str]): Labels for the lines being compared in each plot.
+            Passed to `plot_line_diff`. Defaults to ["Stacked", "Fitted"].
+        **kwargs: Additional keyword arguments to be passed to `plot_line_diff`.
+
+    Returns:
+        NDArray: The array of axes used for plotting.
+    """
+
+    def get_yprofile(dlist, ind):
+        return [x[ind, :] for x in dlist]
+
+    def get_xprofile(dlist, ind):
+        return [x[:, ind] for x in dlist]
+
+    lines_list = [get_yprofile(data_list, ind) for ind in hinds] + [
+        get_xprofile(data_list, ind) for ind in vinds
+    ]
+    n_plots = len(lines_list)
+
+    if axes is None:
+        _, axes = make_figure(
+            nrows=2,
+            ncols=n_plots,
+            figsize=figsize,
+            sharex=True,
+            sharey="row",
+            wspace=0,
+            hspace=0,
+            aspect=None,
+            gridspec_kw={"height_ratios": [2, 1]},
+        )
+    if axes is None:
+        raise ValueError("Failed to create axes.")
+
+    if n_plots == 1:
+        axes = axes[:, np.newaxis]
+
+    for i, lines in enumerate(lines_list):
+        title = titles[i] if titles is not None else None
+        _axes = axes[:, i]
+        plot_line_diff(
+            *lines,
+            axes=_axes,  # pyright: ignore[reportArgumentType]
+            title=title,
+            labels=labels,
+            **kwargs,
+        )
+        if label_outer:
+            _axes[0].label_outer()
+            _axes[1].label_outer()
 
     return axes
