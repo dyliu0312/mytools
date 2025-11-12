@@ -8,12 +8,24 @@ import numpy as np
 from astropy.modeling import fitting, models
 from astropy.stats import sigma_clip
 
-from mytools.halo_new import info_fitness
 from mytools.plot import plot_line_diff
+from mytools.utils import info_fitness, yield_mask_data
 
 
 def get_int(x):
-    """turn the float number to integer, using np.rint"""
+    """
+    Round a float or array of floats to the nearest integer.
+
+    Parameters
+    ----------
+    x : Union[float, np.ndarray]
+        The input number or array.
+
+    Returns
+    -------
+    Union[int, np.ndarray]
+        The rounded integer or array of integers.
+    """
     x = np.array(x)
     return np.rint(x).astype(int)
 
@@ -26,7 +38,26 @@ def get_start_end_pixel_index(
     offset: int = 1,
 ):
     """
-    for given xtick range, get the start and end pixel index
+    Get the start and end pixel indices for a given coordinate range.
+
+    Parameters
+    ----------
+    x_min : float, optional
+        The minimum world coordinate. Defaults to -0.5.
+    x_max : float, optional
+        The maximum world coordinate. Defaults to 0.5.
+    shape : int, optional
+        The number of pixels along the axis. Defaults to 120.
+    lim : Sequence[float], optional
+        The world coordinate limits of the axis, as (min, max).
+        Defaults to (-3, 3).
+    offset : int, optional
+        An offset to add to the calculated end index. Defaults to 1.
+
+    Returns
+    -------
+    Tuple[int, int]
+        The calculated start and end pixel indices.
     """
     xx = np.linspace(lim[0], lim[1], shape)
 
@@ -46,43 +77,59 @@ def get_gaussian_fit(
     **kwargs,
 ):
     """
-    Get the Gaussian fit of the given data using astropy.modelling with sigma clipping.
+    Fit a Gaussian + constant model to 1D data with optional sigma clipping.
 
-    Args:
-        x (np.ndarray): The x data.
-        y (np.ndarray): The y data.
-        weights (Optional[np.ndarray], optional): The weights for the fitting. Defaults to None.
-        sigma_clip_sigma (float, optional): The sigma for sigma clipping. Defaults to 3.0.
-        bounds (Optional[dict], optional): The bounds for the parameters. Defaults to None.
-        print_info (bool, optional): Whether to print the fit information. Defaults to True.
+    Parameters
+    ----------
+    x : np.ndarray
+        The independent variable.
+    y : np.ndarray
+        The dependent variable.
+    weights : Optional[np.ndarray], optional
+        Weights for the fitting. Defaults to None.
+    sigma_clip_sigma : Optional[float], optional
+        The number of standard deviations for sigma clipping. If None, no
+        clipping is performed. Defaults to None.
+    bounds : Optional[dict], optional
+        A dictionary of bounds for the model parameters. Defaults to None.
+    print_info : bool, optional
+        Whether to print the fit information. Defaults to True.
+    **kwargs
+        Additional keyword arguments passed to the fitter.
 
-    Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray, models.CompoundModel]:
-            The fitted y values, the parameters of the fitted function,
-            the covariance matrix of the parameters, and the fitted model.
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, Optional[np.ndarray], Optional[models.CompoundModel]]
+        - The fitted y values.
+        - The parameters of the fitted model.
+        - The covariance matrix of the parameters (if available).
+        - The fitted astropy model instance.
     """
     # Sigma clipping on the data
+    clipped_points_count = 0
     if sigma_clip_sigma is not None:
-        clipped_data: np.ma.MaskedArray = sigma_clip(
-            y, sigma=sigma_clip_sigma, masked=True
-        )  # pyright: ignore[reportAssignmentType]
+        y_masked: np.ma.MaskedArray = sigma_clip(y, sigma=sigma_clip_sigma, masked=True)  # pyright: ignore[reportAssignmentType]
+        mask_array = ~y_masked.mask
+        clipped_points_count = np.sum(y_masked.mask)
     else:
-        clipped_data = np.ma.array(y, mask=False)
+        mask_array = np.ones_like(y, dtype=bool)
 
-    x_clipped = x[~clipped_data.mask]
-    y_clipped = clipped_data.data[~clipped_data.mask]
+    # Apply the mask to the data arrays
+    data_gen = yield_mask_data(x, y, mask=mask_array)
+    x_clipped, y_clipped = next(data_gen), next(data_gen)
+
     weights_clipped = None
     if weights is not None:
-        weights_clipped = weights[~clipped_data.mask]
+        weights_clipped = next(yield_mask_data(weights, mask=mask_array))
 
     if len(x_clipped) < 3:  # Not enough points to fit for 3 parameters
         print("Warning: Not enough data points to fit after sigma clipping.")
         return np.zeros_like(x), np.array([0, 0, 0]), None, None
 
     # Initial guess for the parameters
-    amp_init = np.max(y_clipped) - np.median(y_clipped)
+    amp_init = np.max(y_clipped) - np.ma.median(y_clipped)
     stddev_init = (x_clipped.max() - x_clipped.min()) / 8.0  # A reasonable guess
-    c_init = np.median(y_clipped)
+    c_init = np.ma.median(y_clipped)
 
     # Define the model: Gaussian + constant, with fixed mean=0
     model_init = models.Gaussian1D(  # pyright: ignore[reportOperatorIssue]
@@ -116,8 +163,8 @@ def get_gaussian_fit(
         print(fitted_model.param_names)
         print("Gauss fit parameters: %s" % list(para))
         if cov is not None:
-            print("Gauss fit covariance: \n%s" % cov)
-        print(f"{np.sum(clipped_data.mask)} points clipped during sigma clipping.")
+            print("Gauss fit covariance (without fix mean): \n%s" % cov)
+        print(f"{clipped_points_count} points clipped during sigma clipping.")
         info_fitness(y, fit_y, 3)
 
     return fit_y, para, cov, fitted_model
@@ -134,22 +181,36 @@ def fit_yprofile(
     **kwargs,
 ):
     """
-    fit the y profile of the given data
+    Fit the y-profile of the data, averaged over a given x-range.
 
-    Args:
-        data: the data to fit
-        x_range: the x range to be averaged along the x axis
-        xlim: the x range of the data
-        ylim: the y range of the data
-        show_fit: whether to show the fit result
-        weights: the weights for the data
-        sigma_clip_sigma: the sigma for sigma clipping
-        **kwargs: the kwargs for the 'get_Gaussian_fit' function
+    Parameters
+    ----------
+    data : np.ndarray
+        The 2D data array to fit.
+    x_range : Sequence[float], optional
+        The x-range over which to average the data to create the y-profile.
+        Defaults to [-0.5, 0.5].
+    xlim : Sequence[float], optional
+        The x-limits of the data array. Defaults to [-3, 3].
+    ylim : Sequence[float], optional
+        The y-limits of the data array. Defaults to [-3, 3].
+    show_fit : bool, optional
+        If True, plot the y-profile and the fit. Defaults to True.
+    weights : Optional[np.ndarray], optional
+        Weights for the data, used in averaging and fitting. Defaults to None.
+    sigma_clip_sigma : Optional[float], optional
+        The sigma for sigma clipping during the Gaussian fit. Defaults to None.
+    **kwargs
+        Additional keyword arguments passed to `get_gaussian_fit`.
 
-    Return:
-        Tuple[y, yprofile, fit_y, para, cov]: the y axis, the y profile, \
-            the fitted y profile, the parameters of the fitted function, \
-                and the covariance matrix of the parameters.
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Optional[np.ndarray]]
+        - y-coordinates array.
+        - The averaged y-profile.
+        - The fitted y-profile.
+        - The parameters of the fitted model.
+        - The covariance matrix of the parameters.
     """
     sy, sx = data.shape
 
@@ -173,8 +234,8 @@ def fit_yprofile(
 
     # Default bounds for astropy fitting
     bounds = {
-        "amplitude_0": (-np.inf, np.inf),  # amp > 0
-        "stddev_0": (0, 0.5),  # sigma
+        "amplitude_0": (0, np.inf),  # amp > 0
+        "stddev_0": (0, 0.6),  # sigma
     }
 
     # Update with any user-provided bounds
@@ -192,7 +253,7 @@ def fit_yprofile(
             yy,
             y_profile,
             fit_y,
-            labels=["Y-profile", "Gaussian fit", "residual"],
+            labels=["Y-profile", "Gaussian fit"],
             xlabel="Y",
             ylabel=r"T [$\mu$K]",
         )
@@ -204,19 +265,33 @@ def get_center_outer_background(
     data, width, x_range=[-0.5, 0.5], xlim=[-3, 3], ylim=[-3, 3], shift_unit=2
 ):
     """
-    get the center, outer and background region.
+    Extract center, outer, and background regions from the data.
 
-    Args:
-        data (np.ndarray): the data to be fitted
-        x_range (List[float]): the x range to be fitted
-        xlim (List[float]): the x limit of the data
-        ylim (List[float]): the y limit of the data
-        shift_unit (int): the shift unit of the outer region
-        **kwargs (dict): the parameters for the Gaussian fit
-    Returns:
-        Tuple[np.ndarray]: the center, the outer left, the outer right , and the background.
+    The 'center' is defined by the `x_range` and a given `width` in y.
+    The 'outer' regions are shifted versions of the center region along the x-axis.
+    The 'background' is taken from regions in y far from the center.
 
+    Parameters
+    ----------
+    data : np.ndarray
+        The 2D data array.
+    width : float
+        The half-width (e.g., 1-sigma) of the central region in world coordinates.
+    x_range : list, optional
+        The x-range of the central region. Defaults to [-0.5, 0.5].
+    xlim : list, optional
+        The x-limits of the data array. Defaults to [-3, 3].
+    ylim : list, optional
+        The y-limits of the data array. Defaults to [-3, 3].
+    shift_unit : int, optional
+        The shift distance for the outer regions, in world coordinates.
+        Defaults to 2.
 
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        A tuple containing the extracted regions:
+        (center, outer_left, outer_right, background).
     """
     sy, sx = data.shape
     npix_unit_x = sx / (xlim[1] - xlim[0])
@@ -230,33 +305,28 @@ def get_center_outer_background(
     data_cut = data[:, x_st:x_ed]
 
     # get the center, outer and background region
-    ## the center area use the gauss 1 sigma range
+    # The center area uses the Gaussian 1-sigma width
     y_st = sy // 2 - width_pix
     y_ed = sy // 2 + width_pix
-    # y_st, y_ed = get_start_end_pixel_index(-width, width, shape=data.shape[0], lim=ylim, offset=1)
     center = data_cut[y_st:y_ed, :]
 
-    ## the background area use the 3-4 sigma range with a x width same with center
-    bk_top_ids = y_st + width_pix * 4, y_ed + width_pix * 3
-    bk_bottom_ids = y_st - width_pix * 3, y_ed - width_pix * 4
-    # print(bk_top_ids, bk_bottom_ids)
-    # bk_top_ids = get_start_end_pixel_index(width*3, width*4, shape=data.shape[0], lim=ylim, offset=1)
-    # bk_bottom_ids = get_start_end_pixel_index(-width*4, -width*3, shape=data.shape[0], lim=ylim, offset=1)
-    bk_list = list(range(bk_top_ids[0], bk_top_ids[1])) + list(
-        range(bk_bottom_ids[0], bk_bottom_ids[1])
+    # The background area uses the 3-4 sigma range
+    bk_top_st = y_ed + width_pix * 3
+    bk_top_ed = y_ed + width_pix * 4
+    bk_bottom_st = y_st - width_pix * 4
+    bk_bottom_ed = y_st - width_pix * 3
+    bk_list = list(range(bk_top_st, bk_top_ed)) + list(
+        range(bk_bottom_st, bk_bottom_ed)
     )
     background = data[bk_list, x_st:x_ed]
 
-    ## the outer area use the the center region shift along x-axis
+    # The outer areas are the center region shifted along the x-axis
     left_ids = get_int(
         [x_st - shift_unit * npix_unit_x, x_ed - shift_unit * npix_unit_x]
     )
     right_ids = get_int(
         [x_st + shift_unit * npix_unit_x, x_ed + shift_unit * npix_unit_x]
     )
-    # print(left_ids, right_ids)
-    # left_ids = get_start_end_pixel_index(x_range[0]-shift_unit, x_range[1]-shift_unit, shape=data.shape[1], lim=xlim, offset=0)
-    # right_ids = get_start_end_pixel_index(x_range[0]+shift_unit, x_range[1]+shift_unit, shape=data.shape[1], lim=xlim, offset=0)
     left = data[y_st:y_ed, left_ids[0] : left_ids[1]]
     right = data[y_st:y_ed, right_ids[0] : right_ids[1]]
 
@@ -276,26 +346,43 @@ def get_signal_level(
     **kwargs,
 ):
     """
-    get the signal level of the given data
+    Get the signal level by fitting a y-profile and analyzing regions.
 
-    Args:
-        data (np.ndarray): the data to be fitted
-        weights (Optional[np.ndarray], optional): The weights for the fitting. Defaults to None.
-        x_range (List[float]): the x range to be fitted
-        x_num (int): the number points of x axis
-        xlim (List[float]): the x limit of the data
-        ylim (List[float]): the y limit of the data
-        shift_unit (int): the shift unit of the outer region
-        show_fit (bool): whether to plot the fit result
-        sigma_clip_sigma (Optional[float], optional): the sigma clip sigma for the fitting. Defaults to None.
-        **kwargs (dict): the parameters for the `get_Gaussian fit`
-    Returns:
-        Tuple[List]:
-        1. the x line point list for `plot_profiles`,
-        2. the y line point list for `plot_profiles`,
-        3. the extracted and flatten center, left, right, and background area data points for `plot_hist_result`,
-        4. the parameters of the fitted yprofile function,
-        5. the covariance matrix of the parameters.
+    This function orchestrates the fitting of a y-profile to get a width,
+    then uses that width to define and extract center, outer, and background
+    regions to determine signal levels.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        The 2D data array.
+    weights : Optional[np.ndarray], optional
+        Weights for the fitting. Defaults to None.
+    x_range : list, optional
+        The x-range for profile averaging and analysis. Defaults to [-0.5, 0.5].
+    x_num : int, optional
+        Number of points for the output x-axis. Defaults to 20.
+    xlim : list, optional
+        The x-limits of the data array. Defaults to [-3, 3].
+    ylim : list, optional
+        The y-limits of the data array. Defaults to [-3, 3].
+    shift_unit : int, optional
+        The shift distance for the outer regions. Defaults to 2.
+    show_fit : bool, optional
+        If True, plot the y-profile fit. Defaults to True.
+    sigma_clip_sigma : Optional[float], optional
+        Sigma for sigma clipping in the fit. Defaults to None.
+    **kwargs
+        Additional keyword arguments for `get_gaussian_fit`.
+
+    Returns
+    -------
+    Tuple[List, List, List, np.ndarray, Optional[np.ndarray]]
+        - A list of x-arrays for plotting profiles.
+        - A list of y-arrays for plotting profiles.
+        - A list of flattened data from the center, left, right, and background regions.
+        - The parameters of the fitted y-profile model.
+        - The covariance matrix of the parameters.
     """
 
     # fit the y profile
@@ -310,10 +397,10 @@ def get_signal_level(
         **kwargs,
     )
 
-    # get the center, left, right and background
-    # With mean fixed, paras are [amplitude_0, x_mean_0, stddev_0, amplitude_1]
-    # width is stddev_0, which is paras[2]
+    # For Gaussian1D + Const1D model, parameters are [amplitude, mean, stddev, constant].
+    # The width is the standard deviation, which is paras[2].
     width = paras[2] if paras is not None else 0.1
+    # get the center, left, right and background
     clrb = get_center_outer_background(data, width, x_range, xlim, ylim, shift_unit)
 
     # get the filament signal level and background level
@@ -321,7 +408,7 @@ def get_signal_level(
     tbg = np.mean(clrb[-1], axis=0)
 
     # get the x axis
-    xx = np.linspace(*x_range, x_num)  # pyright: ignore[reportCallIssue]
+    xx = np.linspace(*x_range, num=x_num)
 
     # create the line data
     line_x = [yy, yy, xx, xx]
