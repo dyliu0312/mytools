@@ -193,7 +193,7 @@ def halo_subtract(
             fitmap,
             _,
         ) = func_halo_fit(
-            d, rbin_e, lc, rc, smooth_sigma, weight, mask, coord, info_fit
+            d, rbin_e, lc, rc, weight, mask, coord, info_fit, smooth_sigma
         )
 
         fit.append(fitmap)
