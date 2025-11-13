@@ -128,12 +128,11 @@ def get_gaussian_fit(
 
     # Initial guess for the parameters
     amp_init = np.max(y_clipped) - np.ma.median(y_clipped)
-    stddev_init = (x_clipped.max() - x_clipped.min()) / 8.0  # A reasonable guess
     c_init = np.ma.median(y_clipped)
 
     # Define the model: Gaussian + constant, with fixed mean=0
     model_init = models.Gaussian1D(  # pyright: ignore[reportOperatorIssue]
-        amplitude=amp_init, mean=0, stddev=stddev_init
+        amplitude=amp_init, mean=0, stddev=0.3
     ) + models.Const1D(amplitude=c_init)
     model_init.mean_0.fixed = True
 
@@ -144,11 +143,15 @@ def get_gaussian_fit(
             param.bounds = bound_tuple
 
     # Fitter
-    fitter = fitting.LevMarLSQFitter()
+    fitter = fitting.TRFLSQFitter()
 
     # Fit the model to the clipped data
     fitted_model = fitter(
-        model_init, x_clipped, y_clipped, weights=weights_clipped, **kwargs
+        model_init,
+        x_clipped,
+        y_clipped,
+        weights=weights_clipped,
+        **kwargs,
     )
 
     # Get results
@@ -219,7 +222,7 @@ def fit_yprofile(
     data_cut = data[:, x_st:x_ed]
 
     # fit the y_profile to estimate the width
-    y_profile = np.mean(data_cut, axis=1)
+    y_profile = data_cut.mean(axis=1)
     yy = np.linspace(*ylim, num=sy)
 
     # get weights for y_profile fitting
@@ -230,7 +233,7 @@ def fit_yprofile(
                 f"Shape of weights {weights.shape} must match shape of data {data.shape}."
             )
         weights_cut = weights[:, x_st:x_ed]
-        fit_weights = np.mean(weights_cut, axis=1)
+        fit_weights = weights_cut.mean(axis=1)
 
     # Default bounds for astropy fitting
     bounds = {
