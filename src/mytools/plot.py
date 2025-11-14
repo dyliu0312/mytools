@@ -603,6 +603,8 @@ def plot_line(
     x: List[Union[NDArray, Sequence[float]]],
     y: List[Union[NDArray, Sequence[float]]],
     ax: Optional[Axes] = None,
+    y_err: Optional[List[Optional[Union[NDArray, Sequence[float]]]]] = None,
+    x_err: Optional[List[Optional[Union[NDArray, Sequence[float]]]]] = None,
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
     title: Optional[str] = None,
@@ -620,6 +622,8 @@ def plot_line(
         x (list): x data points.
         y (list): y data points.
         ax (matplotlib.axes.Axes, optional): axes object. Defaults is None, use the axes of new created figure.
+        y_err (list, optional): y error of the data. Defaults to None.
+        x_err (list, optional): x error of the data. Defaults to None.
         xlabel (str, optional): x label. Defaults is None.
         ylabel (str, optional): y label. Defaults is None.
         title (str, optional): title. Defaults is None.
@@ -633,7 +637,7 @@ def plot_line(
         ax (matplotlib.axes.Axes): axes object.
     """
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(5, 4))
+        _, ax = plt.subplots(1, 1, figsize=(5, 4))
 
     nline = len(x)
 
@@ -641,20 +645,36 @@ def plot_line(
     markers = arg_list(marker, nline)
     linestyles = arg_list(linestyle, nline)
     labels = arg_list(label, nline)
+    y_errs = arg_list(y_err, nline)
+    x_errs = arg_list(x_err, nline)
 
     # Plot lines with labels first
     for i in range(nline):
         la = labels[i]
         if la is not None:
-            ax.plot(
-                x[i],
-                y[i],
-                color=colors[i],
-                linestyle=linestyles[i],
-                marker=markers[i],
-                label=la,
-                **kwargs,
-            )
+            if (y_errs[i] is not None) or (x_errs[i] is not None):
+                ax.errorbar(
+                    x[i],
+                    y[i],
+                    yerr=y_errs[i],
+                    xerr=x_errs[i],
+                    color=colors[i],
+                    linestyle=linestyles[i],
+                    marker=markers[i],
+                    label=la,
+                    **kwargs,
+                )
+            else:
+                ax.plot(
+                    x[i],
+                    y[i],
+                    color=colors[i],
+                    linestyle=linestyles[i],
+                    marker=markers[i],
+                    label=la,
+                    **kwargs,
+                )
+
     if any(la is not None for la in labels):
         ax.legend()
 
@@ -662,14 +682,26 @@ def plot_line(
     for i in range(nline):
         la = labels[i]
         if la is None:
-            ax.plot(
-                x[i],
-                y[i],
-                color=colors[i],
-                linestyle=linestyles[i],
-                marker=markers[i],
-                **kwargs,
-            )
+            if (y_errs[i] is not None) or (x_errs[i] is not None):
+                ax.errorbar(
+                    x[i],
+                    y[i],
+                    yerr=y_errs[i],
+                    xerr=x_errs[i],
+                    color=colors[i],
+                    linestyle=linestyles[i],
+                    marker=markers[i],
+                    **kwargs,
+                )
+            else:
+                ax.plot(
+                    x[i],
+                    y[i],
+                    color=colors[i],
+                    linestyle=linestyles[i],
+                    marker=markers[i],
+                    **kwargs,
+                )
 
     if xlabel is not None:
         ax.set_xlabel(xlabel)
@@ -688,7 +720,9 @@ def plot_profile_2c(
     y: List[Union[NDArray, Sequence[float]]],
     cut: int = 2,
     axes: Optional[List[Axes]] = None,
-    text_pos: List[List[float]] = [[-0.48, 10], [-0.5, 3], [-2.5, 10]],
+    y_err: Optional[List[Optional[Union[NDArray, Sequence[float]]]]] = None,
+    x_err: Optional[List[Optional[Union[NDArray, Sequence[float]]]]] = None,
+    text_pos: List[List[float]] = [[-0.35, 10], [-0.38, 2], [-2.5, 10]],
     width: float = 0.32,
     fontsize: Union[float, List[float]] = 12,
     xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
@@ -718,7 +752,9 @@ def plot_profile_2c(
             e.g. cut=2 means the data points in the first two rows are plotted in the first subplot, \
                 and rest are plotted in the second subplot.
         axes (Axes, optional): axes object. Defaults to None.
-        text_pos (List[list]): text position. Defaults to [[-0.48, 10], [-0.5, 3], [-2.5, 10]] \
+        y_err (list, optional): y error of the data. Defaults to None.
+        x_err (list, optional): x error of the data. Defaults to None.
+        text_pos (List[list]): text position. Defaults to [[-0.35, 10], [-0.38, 2], [-2.5, 10]] \
             for filament, background and width.
         width (float): width of the filament to show on the left panel. Defaults to 0.32.
         fontsize (str): fontsize of the text. Defaults to 14.
@@ -755,6 +791,14 @@ def plot_profile_2c(
     except IndexError as ie:
         raise ValueError("cut index is out of the range.") from ie
 
+    y_err_left, y_err_right = None, None
+    if y_err:
+        y_err_left, y_err_right = y_err[:cut], y_err[cut:]
+
+    x_err_left, x_err_right = None, None
+    if x_err:
+        x_err_left, x_err_right = x_err[:cut], x_err[cut:]
+
     nline = len(x)
     xlabel = arg_list(xlabel, 2)
     ylabel = arg_list(ylabel, 2)
@@ -775,6 +819,8 @@ def plot_profile_2c(
             x_left if i == 0 else x_right,
             y_left if i == 0 else y_right,
             ax=ax,
+            y_err=y_err_left if i == 0 else y_err_right,
+            x_err=x_err_left if i == 0 else x_err_right,
             xlabel=xlabel[i],
             ylabel=ylabel[i],
             title=title[i],
@@ -789,19 +835,25 @@ def plot_profile_2c(
         # add text that marker the mean values of filament and background.
         if i == 1:
             # filament
-            mf, sf = np.mean(y_right[0]), np.std(y_right[0])
-            strf = (
-                r"$<T_{\rm f}>$ = %.2f $\mu$K, $\sigma_{T_{\rm f}}$ = %.2f $\mu$K"
-                % (mf, sf)
-            )
+            mf = np.mean(y_right[0])
+            if y_err_right and y_err_right[0] is not None:
+                mf_err = np.sqrt(np.sum(y_err_right[0] ** 2)) / len(y_right[0])
+            else:
+                mf_err = np.std(y_right[0]) / np.sqrt(len(y_right[0]))
+
+            strf = r"$<T_{\rm f}>$ = %.2f $\pm$ %.2f $\mu$K" % (mf, mf_err)
             ax.text(*text_pos[0], s=strf, color="r", fontsize=fontsize[0])
+
             # background
-            mb, sb = np.mean(y_right[1]), np.std(y_right[1])
-            strb = (
-                r"$<T_{\rm bg}>$ = %.2f $\mu$K, $\sigma_{T_{\rm bg}}$ = %.2f $\mu$K"
-                % (mb, sb)
-            )
+            mb = np.mean(y_right[1])
+            if y_err_right and y_err_right[1] is not None:
+                mb_err = np.sqrt(np.sum(y_err_right[1] ** 2)) / len(y_right[1])
+            else:
+                mb_err = np.std(y_right[1]) / np.sqrt(len(y_right[1]))
+
+            strb = r"$<T_{\rm bg}>$ = %.2f $\pm$ %.2f $\mu$K" % (mb, mb_err)
             ax.text(*text_pos[1], s=strb, color="k", fontsize=fontsize[1])
+
         # add text that marker the width of filament
         else:
             ax.text(
@@ -819,6 +871,8 @@ def plot_profile_2r(
     y: List[List[Union[NDArray, Sequence[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], List[Axes], None] = None,
+    y_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
+    x_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
     text_pos: List[List[float]] = [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]],
     width: Union[float, List[float]] = 0.32,
     fontsize: Union[float, List[float]] = 14,
@@ -840,6 +894,8 @@ def plot_profile_2r(
         cut (int): cut index to separate the data into upper and bottom two parts. Defaults to 2. \
             i.e. The upper and bottom panels of the first subplot is showing x[0, :cut] and x[0, cut:] respectively.
         axes (List[Axes], Tuple[Axes], None): axes object. Defaults to None.
+        y_err (list, optional): y error of the data. Defaults to None.
+        x_err (list, optional): x error of the data. Defaults to None.
         text_pos (list): text positions. Defaults to [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]].
         width (float, list): width of the filament to show on the upper pannel. Defaults to 0.32.
         fontsize (float): fontsize of the text. Defaults to 14.
@@ -900,6 +956,14 @@ def plot_profile_2r(
             ls_up, ls_down = linestyle[st:ed][:cut], linestyle[st:ed][cut:]
             la_up, la_down = label[st:ed][:cut], label[st:ed][cut:]
 
+            y_err_up, y_err_down = None, None
+            if y_err and y_err[i]:
+                y_err_up, y_err_down = y_err[i][:cut], y_err[i][cut:]
+
+            x_err_up, x_err_down = None, None
+            if x_err and x_err[i]:
+                x_err_up, x_err_down = x_err[i][:cut], x_err[i][cut:]
+
             _text_pos = text_pos[i * ntext : (i + 1) * ntext]
             _xlabel = xlabel[i * nrow : (i + 1) * nrow]
             _ylabel = ylabel[i * nrow : (i + 1) * nrow]
@@ -914,6 +978,8 @@ def plot_profile_2r(
             x_up,
             y_up,
             ax_up,
+            y_err=y_err_up,
+            x_err=x_err_up,
             xlabel=_xlabel[0],
             ylabel=_ylabel[0],
             title=_title[0],
@@ -933,6 +999,8 @@ def plot_profile_2r(
             x_down,
             y_down,
             ax_down,
+            y_err=y_err_down,
+            x_err=x_err_down,
             xlabel=_xlabel[1],
             ylabel=_ylabel[1],
             title=_title[1],
@@ -945,18 +1013,23 @@ def plot_profile_2r(
         ax_down.axhline(0, linestyle="--", c="gray")
 
         # filament
-        mf, sf = np.mean(y_down[0]), np.std(y_down[0])
-        strf = r"$<T_{\rm f}>$ = %.2f $\mu$K, $\sigma_{T_{\rm f}}$ = %.2f $\mu$K" % (
-            mf,
-            sf,
-        )
+        mf = np.mean(y_down[0])
+        if y_err_down and y_err_down[0] is not None:
+            mf_err = np.sqrt(np.sum(y_err_down[0] ** 2)) / len(y_down[0])
+        else:
+            mf_err = np.std(y_down[0]) / np.sqrt(len(y_down[0]))
+
+        strf = r"$<T_{\rm f}>$ = %.2f $\pm$ %.2f $\mu$K" % (mf, mf_err)
         ax_down.text(*_text_pos[0], s=strf, color="r", fontsize=fontsize[1])
+
         # background
-        mb, sb = np.mean(y_down[1]), np.std(y_down[1])
-        strb = r"$<T_{\rm bg}>$ = %.2f $\mu$K, $\sigma_{T_{\rm bg}}$ = %.2f $\mu$K" % (
-            mb,
-            sb,
-        )
+        mb = np.mean(y_down[1])
+        if y_err_down and y_err_down[1] is not None:
+            mb_err = np.sqrt(np.sum(y_err_down[1] ** 2)) / len(y_down[1])
+        else:
+            mb_err = np.std(y_down[1]) / np.sqrt(len(y_down[1]))
+
+        strb = r"$<T_{\rm bg}>$ = %.2f $\pm$ %.2f $\mu$K" % (mb, mb_err)
         ax_down.text(*_text_pos[1], s=strb, color="k", fontsize=fontsize[2])
 
     return axes
@@ -967,6 +1040,8 @@ def plot_profile_2c2r(
     y: List[List[Union[NDArray, Sequence[float]]]],
     cut: int = 2,
     axes: Union[Tuple[Axes], None] = None,
+    y_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
+    x_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
     text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
     width: Union[float, List[float]] = [0.32] * 2,
     fontsize: Union[float, List[float]] = [14.0] * 3,
@@ -1002,6 +1077,8 @@ def plot_profile_2c2r(
         y (List[list]): y data points.
         cut (int): cut index. Defaults to 2.
         axes (Axes, optional): axes object. Defaults to None to create a new figure.
+        y_err (list, optional): y error of the data. Defaults to None.
+        x_err (list, optional): x error of the data. Defaults to None.
         text_pos (List[list]): text position.
         width (float): width of the filament.
         fontsize (str): fontsize of the text.
@@ -1056,11 +1133,15 @@ def plot_profile_2c2r(
     title = arg_list(title, ncol * nrow)
 
     for i in range(nrow):
+        y_err_row = y_err[i] if y_err else None
+        x_err_row = x_err[i] if x_err else None
         plot_profile_2c(
             x[i],
             y[i],
             cut=cut,
             axes=list(axes)[i],  # pyright: ignore[reportArgumentType]
+            y_err=y_err_row,
+            x_err=x_err_row,
             text_pos=text_pos[:ntext] if i == 0 else text_pos[ntext:],
             width=width[i],
             fontsize=fontsize[i],
@@ -1488,6 +1569,8 @@ def save_plot(
 
 def plot_line_diff(
     *args: Union[List[float], NDArray],
+    y1_err: Optional[NDArray] = None,
+    y2_err: Optional[NDArray] = None,
     axes: Optional[List[Axes]] = None,
     kw_line1: Optional[dict] = None,
     kw_line2: Optional[dict] = None,
@@ -1507,6 +1590,8 @@ def plot_line_diff(
     -----------
     *args : x, y1, y2 or y1, y2
         Either three arrays (x, y1, y2) or two arrays (y1, y2)
+    y1_err, y2_err : np.ndarray, optional
+        Error on y1 and y2. Defaults to None.
     axes : list of matplotlib Axes, optional
         Existing axes to plot on. Defaults to None to create new axes.
     kw_line1, kw_line2, kw_diff : dict, optional
@@ -1584,19 +1669,37 @@ def plot_line_diff(
     diff = y1 - y2
 
     # Plot lines
-    line1 = axes[0].plot(x, y1, **dkw_line1)  # pyright: ignore[reportArgumentType]
-    line2 = axes[0].plot(x, y2, **dkw_line2)  # pyright: ignore[reportArgumentType]
+    if y1_err is not None:
+        line1 = axes[0].errorbar(x, y1, yerr=y1_err, **dkw_line1)
+    else:
+        line1 = axes[0].plot(x, y1, **dkw_line1)[0]
+
+    if y2_err is not None:
+        line2 = axes[0].errorbar(x, y2, yerr=y2_err, **dkw_line2)
+    else:
+        line2 = axes[0].plot(x, y2, **dkw_line2)[0]
 
     # Plot difference
-    linediff = axes[1].plot(x, diff, **dkw_diff)  # pyright: ignore[reportArgumentType]
+    diff_err = None
+    if y1_err is not None and y2_err is not None:
+        diff_err = np.sqrt(y1_err**2 + y2_err**2)
+    elif y1_err is not None:
+        diff_err = y1_err
+    elif y2_err is not None:
+        diff_err = y2_err
+
+    if diff_err is not None:
+        linediff = axes[1].errorbar(x, diff, yerr=diff_err, **dkw_diff)
+    else:
+        linediff = axes[1].plot(x, diff, **dkw_diff)[0]
 
     # Add labels if provided
     if labels is not None:
         if len(labels) == 2:
-            axes[0].legend([line1[0], line2[0]], labels)
+            axes[0].legend([line1, line2], labels)
         elif len(labels) == 3:
-            axes[0].legend([line1[0], line2[0]], labels[:-1])
-            axes[1].legend([linediff[0]], [labels[-1]])
+            axes[0].legend([line1, line2], labels[:-1])
+            axes[1].legend([linediff], [labels[-1]])
         else:
             raise ValueError("labels must have length 2 or 3")
 
@@ -1626,6 +1729,7 @@ def plot_line_diff(
 
 def compare_profiles(
     data_list: List[NDArray],
+    err_list: Optional[List[NDArray]] = None,
     hinds: List[int] = [60],
     vinds: List[int] = [40, 80],
     titles: Optional[List[str]] = ["Y=0", "X=-1", "X=1"],
@@ -1644,6 +1748,7 @@ def compare_profiles(
     Args:
         data_list (List[NDArray]): A list of numpy arrays to compare.
             Typically, this would be a list of two arrays, e.g., [data1, data2].
+        err_list (Optional[List[NDArray]]): A list of numpy arrays for the errors.
         hinds (List[int]): A list of indices for horizontal profiles (Y profiles).
         vinds (List[int]): A list of indices for vertical profiles (X profiles).
         titles (Optional[List[str]]): Titles for the profile plots. The number
@@ -1672,6 +1777,13 @@ def compare_profiles(
     lines_list = [get_yprofile(data_list, ind) for ind in hinds] + [
         get_xprofile(data_list, ind) for ind in vinds
     ]
+
+    errs_list = []
+    if err_list is not None:
+        errs_list = [get_yprofile(err_list, ind) for ind in hinds] + [
+            get_xprofile(err_list, ind) for ind in vinds
+        ]
+
     n_plots = len(lines_list)
 
     if axes is None:
@@ -1695,13 +1807,24 @@ def compare_profiles(
     for i, lines in enumerate(lines_list):
         title = titles[i] if titles is not None else None
         _axes = axes[:, i]
+
+        plot_kwargs = {
+            "axes": _axes,
+            "title": title,
+            "labels": labels,
+            **kwargs,
+        }
+
+        if err_list is not None and errs_list:
+            errors = errs_list[i]
+            plot_kwargs["y1_err"] = errors[0]
+            plot_kwargs["y2_err"] = errors[1]
+
         plot_line_diff(
             *lines,
-            axes=_axes,  # pyright: ignore[reportArgumentType]
-            title=title,
-            labels=labels,
-            **kwargs,
+            **plot_kwargs,
         )
+
         if label_outer:
             _axes[0].label_outer()
             _axes[1].label_outer()
