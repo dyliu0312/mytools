@@ -170,8 +170,8 @@ def make_figure(
     figsize: Tuple[float, float] = (4, 3),
     sharex: Union[bool, Literal["none", "all", "row", "col"]] = True,
     sharey: Union[bool, Literal["none", "all", "row", "col"]] = True,
-    wspace: float = 0.1,
-    hspace: float = 0.1,
+    wspace: float = 0.0,
+    hspace: float = 0.0,
     aspect: Optional[str] = "equal",
     gridspec_kw: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
     subplot_kw: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
@@ -186,8 +186,8 @@ def make_figure(
         figsize (Tuple[float, float], optional): figure size. Defaults to (6, 4).
         sharex (bool, optional): share x axis or not. Defaults to True.
         sharey (bool, optional): share y axis or not. Defaults to True.
-        wspace (float, optional): width space between subplots. Defaults to 0.1.
-        hspace (float, optional): height space between subplots. Defaults to 0.1.
+        wspace (float, optional): width space between subplots. Defaults to 0.
+        hspace (float, optional): height space between subplots. Defaults to 0.
         aspect (str, optional): aspect of subplots. Defaults to "equal". Set to None for auto aspect.
         gridspec_kw (dict, optional): gridspec kwargs. Defaults to None.
         subplot_kw (dict, optional): subplot kwargs. Defaults to None.
@@ -722,7 +722,7 @@ def plot_profile_2c(
     axes: Optional[List[Axes]] = None,
     y_err: Optional[List[Optional[Union[NDArray, Sequence[float]]]]] = None,
     x_err: Optional[List[Optional[Union[NDArray, Sequence[float]]]]] = None,
-    text_pos: List[List[float]] = [[-0.35, 10], [-0.38, 2], [-2.5, 10]],
+    text_pos: Optional[List[List[float]]] = None,
     width: float = 0.32,
     fontsize: Union[float, List[float]] = 12,
     xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
@@ -754,10 +754,9 @@ def plot_profile_2c(
         axes (Axes, optional): axes object. Defaults to None.
         y_err (list, optional): y error of the data. Defaults to None.
         x_err (list, optional): x error of the data. Defaults to None.
-        text_pos (List[list]): text position. Defaults to [[-0.35, 10], [-0.38, 2], [-2.5, 10]] \
-            for filament, background and width.
+        text_pos (List[list], optional): text position. Defaults to None, and the text position will be auto.
         width (float): width of the filament to show on the left panel. Defaults to 0.32.
-        fontsize (str): fontsize of the text. Defaults to 14.
+        fontsize (str): fontsize of the text. Defaults to 12.
         xlabel (str, list): x-axis labels. Defaults to ["Y", "X"].
         ylabel (str, list): y-axis labels. Defaults to [r"$T$[$\\mu$K]", None].
         title (str, list): subplot titles. Defaults to ["Transverse-section profile", \
@@ -808,7 +807,7 @@ def plot_profile_2c(
     marker = arg_list(marker, nline)
     linestyle = arg_list(linestyle, nline)
     label = arg_list(label, nline)
-    fontsize = arg_list(fontsize, len(text_pos))
+    fontsize = arg_list(fontsize, 3)
 
     for i, ax in enumerate(list(axes)):  # type: ignore
         c = color[:cut] if i == 0 else color[cut:]
@@ -837,31 +836,62 @@ def plot_profile_2c(
             # filament
             mf = np.mean(y_right[0])
             if y_err_right and y_err_right[0] is not None:
-                mf_err = np.sqrt(np.sum(y_err_right[0] ** 2)) / len(y_right[0])
+                mf_err = np.sqrt(np.sum(y_err_right[0] ** 2)) / len(y_right[0])  # pyright: ignore[reportOperatorIssue]
             else:
                 mf_err = np.std(y_right[0]) / np.sqrt(len(y_right[0]))
 
             strf = r"$<T_{\rm f}>$ = %.2f $\pm$ %.2f $\mu$K" % (mf, mf_err)
-            ax.text(*text_pos[0], s=strf, color="r", fontsize=fontsize[0])
+            if text_pos is None:
+                ax.text(
+                    0.05,
+                    0.9,
+                    strf,
+                    color="r",
+                    fontsize=fontsize[0],
+                    transform=ax.transAxes,
+                )
+            else:
+                ax.text(*text_pos[0], s=strf, color="r", fontsize=fontsize[0])
 
             # background
             mb = np.mean(y_right[1])
             if y_err_right and y_err_right[1] is not None:
-                mb_err = np.sqrt(np.sum(y_err_right[1] ** 2)) / len(y_right[1])
+                mb_err = np.sqrt(np.sum(y_err_right[1] ** 2)) / len(y_right[1])  # pyright: ignore[reportOperatorIssue]
             else:
                 mb_err = np.std(y_right[1]) / np.sqrt(len(y_right[1]))
 
             strb = r"$<T_{\rm bg}>$ = %.2f $\pm$ %.2f $\mu$K" % (mb, mb_err)
-            ax.text(*text_pos[1], s=strb, color="k", fontsize=fontsize[1])
+            if text_pos is None:
+                ax.text(
+                    0.05,
+                    0.8,
+                    strb,
+                    color="k",
+                    fontsize=fontsize[1],
+                    transform=ax.transAxes,
+                )
+            else:
+                ax.text(*text_pos[1], s=strb, color="k", fontsize=fontsize[1])
 
         # add text that marker the width of filament
         else:
-            ax.text(
-                *text_pos[2],
-                s=r"$w_{\rm t} = %.2f$" % width,
-                color="r",
-                fontsize=fontsize[2],
-            )
+            strw = r"$w_{\rm t} = %.2f$" % width
+            if text_pos is None:
+                ax.text(
+                    0.05,
+                    0.9,
+                    strw,
+                    color="r",
+                    fontsize=fontsize[2],
+                    transform=ax.transAxes,
+                )
+            else:
+                ax.text(
+                    *text_pos[2],
+                    s=strw,
+                    color="r",
+                    fontsize=fontsize[2],
+                )
 
     return axes
 
@@ -873,9 +903,9 @@ def plot_profile_2r(
     axes: Union[Tuple[Axes], List[Axes], None] = None,
     y_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
     x_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
-    text_pos: List[List[float]] = [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]],
+    text_pos: Optional[List[List[float]]] = None,
     width: Union[float, List[float]] = 0.32,
-    fontsize: Union[float, List[float]] = 14,
+    fontsize: Union[float, List[float]] = 12,
     title: Union[str, List[str], None] = None,
     xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
     ylabel: Union[str, List[Union[str, None]], None] = r"$T\,[\mu$K]",
@@ -896,9 +926,9 @@ def plot_profile_2r(
         axes (List[Axes], Tuple[Axes], None): axes object. Defaults to None.
         y_err (list, optional): y error of the data. Defaults to None.
         x_err (list, optional): x error of the data. Defaults to None.
-        text_pos (list): text positions. Defaults to [[-0.45, 0.5], [-0.45, -0.2], [-2, 0.5]].
+        text_pos (list, optional): text positions. Defaults to None, and the text position will be auto.
         width (float, list): width of the filament to show on the upper pannel. Defaults to 0.32.
-        fontsize (float): fontsize of the text. Defaults to 14.
+        fontsize (float): fontsize of the text. Defaults to 12.
         title (str, list): titles of the subplots. Defaults to None.
         xlabel_up (str, list): x labels of the upper pannels. Defaults to "Y".
         xlabel_down (str, list): x labels of the lower pannels. Defaults to "X". Set to None to same as xlabel_up.
@@ -937,7 +967,8 @@ def plot_profile_2r(
     label = arg_list(label, nline, ncol)
 
     # check text parameters
-    text_pos = arg_list(text_pos, ntext, ncol)
+    if text_pos is not None:
+        text_pos = arg_list(text_pos, ntext, ncol)
     fontsize = arg_list(fontsize, ntext, ncol)
     width = arg_list(width, ncol)
 
@@ -964,7 +995,9 @@ def plot_profile_2r(
             if x_err and x_err[i]:
                 x_err_up, x_err_down = x_err[i][:cut], x_err[i][cut:]
 
-            _text_pos = text_pos[i * ntext : (i + 1) * ntext]
+            _text_pos = (
+                text_pos[i * ntext : (i + 1) * ntext] if text_pos is not None else None
+            )
             _xlabel = xlabel[i * nrow : (i + 1) * nrow]
             _ylabel = ylabel[i * nrow : (i + 1) * nrow]
             _title = title[i * nrow : (i + 1) * nrow]
@@ -991,7 +1024,17 @@ def plot_profile_2r(
         )
         ax_up.axhline(0, linestyle="--", c="gray")
         strw = r"$w_{\rm t} = %.2f$" % width[i]
-        ax_up.text(*_text_pos[2], s=strw, color="r", fontsize=fontsize[0])
+        if _text_pos is None:
+            ax_up.text(
+                0.05,
+                0.9,
+                strw,
+                color="r",
+                fontsize=fontsize[0],
+                transform=ax_up.transAxes,
+            )
+        else:
+            ax_up.text(*_text_pos[2], s=strw, color="r", fontsize=fontsize[0])
 
         # plot lower pannel
         ax_down = axes[1, i] if ncol > 1 else axes[1]  # pyright: ignore[reportGeneralTypeIssues, reportArgumentType, reportCallIssue]
@@ -1015,22 +1058,42 @@ def plot_profile_2r(
         # filament
         mf = np.mean(y_down[0])
         if y_err_down and y_err_down[0] is not None:
-            mf_err = np.sqrt(np.sum(y_err_down[0] ** 2)) / len(y_down[0])
+            mf_err = np.sqrt(np.sum(y_err_down[0] ** 2)) / len(y_down[0])  # pyright: ignore[reportOperatorIssue]
         else:
             mf_err = np.std(y_down[0]) / np.sqrt(len(y_down[0]))
 
         strf = r"$<T_{\rm f}>$ = %.2f $\pm$ %.2f $\mu$K" % (mf, mf_err)
-        ax_down.text(*_text_pos[0], s=strf, color="r", fontsize=fontsize[1])
+        if _text_pos is None:
+            ax_down.text(
+                0.05,
+                0.9,
+                strf,
+                color="r",
+                fontsize=fontsize[1],
+                transform=ax_down.transAxes,
+            )
+        else:
+            ax_down.text(*_text_pos[0], s=strf, color="r", fontsize=fontsize[1])
 
         # background
         mb = np.mean(y_down[1])
         if y_err_down and y_err_down[1] is not None:
-            mb_err = np.sqrt(np.sum(y_err_down[1] ** 2)) / len(y_down[1])
+            mb_err = np.sqrt(np.sum(y_err_down[1] ** 2)) / len(y_down[1])  # pyright: ignore[reportOperatorIssue]
         else:
             mb_err = np.std(y_down[1]) / np.sqrt(len(y_down[1]))
 
         strb = r"$<T_{\rm bg}>$ = %.2f $\pm$ %.2f $\mu$K" % (mb, mb_err)
-        ax_down.text(*_text_pos[1], s=strb, color="k", fontsize=fontsize[2])
+        if _text_pos is None:
+            ax_down.text(
+                0.05,
+                0.8,
+                strb,
+                color="k",
+                fontsize=fontsize[2],
+                transform=ax_down.transAxes,
+            )
+        else:
+            ax_down.text(*_text_pos[1], s=strb, color="k", fontsize=fontsize[2])
 
     return axes
 
@@ -1042,9 +1105,9 @@ def plot_profile_2c2r(
     axes: Union[Tuple[Axes], None] = None,
     y_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
     x_err: Optional[List[List[Optional[Union[NDArray, Sequence[float]]]]]] = None,
-    text_pos: List[List[float]] = [[-0.45, 0.6], [-0.45, -0.2], [-2, 0.6]],
+    text_pos: Optional[List[List[float]]] = None,
     width: Union[float, List[float]] = [0.32] * 2,
-    fontsize: Union[float, List[float]] = [14.0] * 3,
+    fontsize: Union[float, List[float]] = [12.0] * 3,
     xlabel: Union[str, List[Union[str, None]], None] = [None, None, "Y", "X"],
     ylabel: Union[str, List[Union[str, None]], None] = [
         r"$T\,[\mu$K] (HI only)",
@@ -1079,7 +1142,7 @@ def plot_profile_2c2r(
         axes (Axes, optional): axes object. Defaults to None to create a new figure.
         y_err (list, optional): y error of the data. Defaults to None.
         x_err (list, optional): x error of the data. Defaults to None.
-        text_pos (List[list]): text position.
+        text_pos (List[list], optional): text position. Defaults to None, and the text position will be auto.
         width (float): width of the filament.
         fontsize (str): fontsize of the text.
         xlabel (List[list]): x-axis labels.
@@ -1123,7 +1186,8 @@ def plot_profile_2c2r(
     label = arg_list(label, nline * nrow)
 
     # check text parameters
-    text_pos = arg_list(text_pos, ntext, nrow)
+    if text_pos is not None:
+        text_pos = arg_list(text_pos, ntext, nrow)
     width = arg_list(width, nrow)
     fontsize = arg_list(fontsize, nrow)
 
@@ -1142,7 +1206,9 @@ def plot_profile_2c2r(
             axes=list(axes)[i],  # pyright: ignore[reportArgumentType]
             y_err=y_err_row,
             x_err=x_err_row,
-            text_pos=text_pos[:ntext] if i == 0 else text_pos[ntext:],
+            text_pos=(text_pos[:ntext] if i == 0 else text_pos[ntext:])
+            if text_pos is not None
+            else None,
             width=width[i],
             fontsize=fontsize[i],
             xlabel=xlabel[:ncol] if i == 0 else xlabel[ncol:],
@@ -1670,28 +1736,28 @@ def plot_line_diff(
 
     # Plot lines
     if y1_err is not None:
-        line1 = axes[0].errorbar(x, y1, yerr=y1_err, **dkw_line1)
+        line1 = axes[0].errorbar(x, y1, yerr=y1_err, **dkw_line1)  # pyright: ignore[reportArgumentType]
     else:
-        line1 = axes[0].plot(x, y1, **dkw_line1)[0]
+        line1 = axes[0].plot(x, y1, **dkw_line1)[0]  # pyright: ignore[reportArgumentType]
 
     if y2_err is not None:
-        line2 = axes[0].errorbar(x, y2, yerr=y2_err, **dkw_line2)
+        line2 = axes[0].errorbar(x, y2, yerr=y2_err, **dkw_line2)  # pyright: ignore[reportArgumentType]
     else:
-        line2 = axes[0].plot(x, y2, **dkw_line2)[0]
+        line2 = axes[0].plot(x, y2, **dkw_line2)[0]  # pyright: ignore[reportArgumentType]
 
     # Plot difference
     diff_err = None
     if y1_err is not None and y2_err is not None:
-        diff_err = np.sqrt(y1_err**2 + y2_err**2)
+        diff_err = np.sqrt(y1_err**2 + y2_err**2)  # pyright: ignore[reportArgumentType]
     elif y1_err is not None:
         diff_err = y1_err
     elif y2_err is not None:
         diff_err = y2_err
 
     if diff_err is not None:
-        linediff = axes[1].errorbar(x, diff, yerr=diff_err, **dkw_diff)
+        linediff = axes[1].errorbar(x, diff, yerr=diff_err, **dkw_diff)  # pyright: ignore[reportArgumentType]
     else:
-        linediff = axes[1].plot(x, diff, **dkw_diff)[0]
+        linediff = axes[1].plot(x, diff, **dkw_diff)[0]  # pyright: ignore[reportArgumentType]
 
     # Add labels if provided
     if labels is not None:
