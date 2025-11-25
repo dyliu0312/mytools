@@ -508,8 +508,6 @@ def plot_stack_fit_res(
     ],
     xlabel: Union[str, List[str]] = "X",
     ylabel: Union[str, List[str]] = "Y",
-    fit_mask: Optional[NDArray] = None,
-    alpha: float = 0.15,
 ) -> List[Axes]:
     """
     plot stack, fit and residual map for comparison.
@@ -533,15 +531,6 @@ def plot_stack_fit_res(
         ylabel=ylabel,
     )
 
-    if fit_mask is not None:
-        # Plot mask region
-        plot_heatmap(
-            fit_mask.astype(int),
-            ax=axes[1],  # type: ignore
-            cmap="gray",
-            show_cbar=False,
-            kw_pcolormesh=dict(alpha=alpha),
-        )
     return axes
 
 
