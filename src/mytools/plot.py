@@ -1,5 +1,5 @@
 """
-General and usful functions for plotting.
+General and useful functions for plotting.
 """
 
 from typing import (
@@ -289,6 +289,7 @@ def plot_heatmap(
         kw_pcolormesh (dict, optional): kwargs for pcolormesh. Defaults is None.
         kw_cbar (dict, optional): kwargs for colorbar. Defaults is None.
         kw_ticks (dict, optional): kwargs for `set_ticks`. Defaults is None to use default values `dict(share=True, kw_get_ticks = dict(ticks=[20, 60, 100], shape=121, lim=(-3, 3), digits=0))`.
+        sym_cbar: bool, optional: whether to use symmetric colorbar limits based on the maximum value between vmax and vmin. Defaults is False.
     Returns:
         matplotlib.axes.Axes: axis with heatmap and colorbar.
     """
@@ -411,6 +412,7 @@ def plot_heatmaps(
     kw_pcolormesh: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
     kw_cbar: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
     kw_ticks: Optional[dict] = None,  # pyright: ignore[reportMissingTypeArgument]
+    sym_cbar: Union[bool, List[bool]] = False,
 ) -> List[Axes]:
     """
     plot multiple heatmaps in a row.
@@ -440,6 +442,7 @@ def plot_heatmaps(
         kw_pcolormesh: dict, kwargs for pcolormesh.
         kw_cbar: dict, kwargs for colorbar.
         kw_ticks: dict, kwargs for `set_ticks`.
+        sym_cbar: bool or a list of bool, whether to use symmetric colorbar limits. Defaults is False.
     Returns:
         axes
     """
@@ -451,6 +454,7 @@ def plot_heatmaps(
 
     show_cbar = arg_list(show_cbar, n)  # type: ignore
     cbar_label = arg_list(cbar_label, n)
+    sym_cbar = arg_list(sym_cbar, n)
     title = arg_list(title, n)
     xlabel = arg_list(xlabel, n)
     ylabel = arg_list(ylabel, n)
@@ -484,6 +488,7 @@ def plot_heatmaps(
             kw_pcolormesh=kw_pcolormesh,
             kw_cbar=kw_cbar,
             kw_ticks=kw_ticks,
+            sym_cbar=sym_cbar[i],
         )
 
         if label_outer:
