@@ -12,8 +12,6 @@ from scipy.optimize import least_squares
 from mytools.bins import get_id_edge
 from mytools.utils import (
     get_coord,
-    get_mask_sector,
-    get_mask_square,
     get_r_theta,
     info_fitness,
     yield_mask_data,
@@ -104,7 +102,7 @@ def halo_fit(
         """Calculates the weighted residual for the least-squares fit."""
         fitmap = get_fitmap(paras, r1_ids, r2_ids)
         residual = data - fitmap
-        return np.sqrt(weight) * residual
+        return weight * residual
 
     # --- Perform the fitting ---
     num_bins = len(rbin_e) - 1
