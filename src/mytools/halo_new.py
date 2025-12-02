@@ -12,6 +12,7 @@ from scipy.optimize import least_squares
 from mytools.bins import get_id_edge
 from mytools.utils import (
     get_coord,
+    get_mask_sector,
     get_r_theta,
     info_fitness,
     yield_mask_data,
