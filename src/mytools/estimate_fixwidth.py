@@ -2,7 +2,7 @@
 estimate the signal level baed on the given width.
 """
 
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -144,7 +144,7 @@ def get_center_outer_background(
     return clrb, clrb_err
 
 
-def get_signal_level_with_width(
+def get_signal_level_fixwidth(
     data: np.ndarray,
     width: float,
     data_err: Optional[np.ndarray] = None,
@@ -153,7 +153,6 @@ def get_signal_level_with_width(
     xlim: Sequence[float] = [-3, 3],
     ylim: Sequence[float] = [-3, 3],
     shift_unit: int = 2,
-    show_profile: bool = True,
 ):
     """
     Get the signal level with a given width.
@@ -238,3 +237,152 @@ def get_signal_level_with_width(
     clrb_err_flat = [x.flatten() for x in clrb_err]
 
     return line_x, line_y, line_y_err, clrb_flat, clrb_err_flat
+
+
+def get_signal_level_fixwidth_multi(
+    datas: Sequence[np.ndarray],
+    width: float,
+    data_errs: Optional[Sequence[np.ndarray]] = None,
+    x_range: Sequence[float] = [-0.5, 0.5],
+    x_num: int = 20,
+    xlim: Sequence[float] = [-3, 3],
+    ylim: Sequence[float] = [-3, 3],
+    shift_unit: int = 2,
+):
+    """
+    Get the signal level with a given width for multiple datasets.
+
+    This function processes each 2D data array in `datas` independently
+    using `get_signal_level_fixwidth` and returns a list of results
+    for each dataset.
+
+    Parameters
+    ----------
+    datas : Sequence[np.ndarray]
+        A list of 2D data arrays.
+    width : float
+        The half-width (e.g., 1-sigma) of the central region in world coordinates.
+    data_errs : Optional[Sequence[np.ndarray]], optional
+        A list of 1-sigma error arrays for the data. Must have the same
+        length and shapes as `datas`. Defaults to None.
+    x_range : Sequence[float], optional
+        The x-range for profile averaging and analysis. Defaults to [-0.5, 0.5].
+    x_num : int, optional
+        Number of points for the output x-axis. Defaults to 20.
+    xlim : Sequence[float], optional
+        The x-limits of the data array. Defaults to [-3, 3].
+    ylim : Sequence[float], optional
+        The y-limits of the data array. Defaults to [-3, 3].
+    shift_unit : int, optional
+        The shift distance for the outer regions. Defaults to 2.
+
+    Returns
+    -------
+    Tuple[list, list, list, list, list]
+        A tuple of lists, where each inner list contains the corresponding
+        return value from `get_signal_level_fixwidth` for each input dataset.
+        - List of line_x arrays.
+        - List of line_y arrays.
+        - List of line_y_err arrays.
+        - List of clrb_flat arrays.
+        - List of clrb_err_flat arrays.
+    """
+    results = []
+
+    if data_errs is None:
+        processed_data_errs = [None] * len(datas)
+    else:
+        processed_data_errs = data_errs
+
+    if len(datas) != len(processed_data_errs):
+        raise ValueError("datas and data_errs must have the same length.")
+
+    if not datas:
+        return [], [], [], [], []
+
+    for i, data in enumerate(datas):
+        err_data = processed_data_errs[i]
+
+        line_x, line_y, line_y_err, clrb_flat, clrb_err_flat = (
+            get_signal_level_fixwidth(
+                data=data,
+                width=width,
+                data_err=err_data,
+                x_range=x_range,
+                x_num=x_num,
+                xlim=xlim,
+                ylim=ylim,
+                shift_unit=shift_unit,
+            )
+        )
+        results.append((line_x, line_y, line_y_err, clrb_flat, clrb_err_flat))
+
+    transposed_results = list(zip(*results))
+    return (
+        transposed_results[0],
+        transposed_results[1],
+        transposed_results[2],
+        transposed_results[3],
+        transposed_results[4],
+    )
+
+
+def get_averaged_signal_levels(
+    line_y_list: Sequence[Sequence[np.ndarray]],
+    line_y_err_list: Sequence[Sequence[Optional[np.ndarray]]],
+) -> Tuple[List[float], List[float], List[float], List[float]]:
+    """
+    Extracts and averages the signal level (tf) and background level (tbg)
+    for each dataset from the outputs of `get_signal_level_fixwidth_multi`.
+
+    Parameters
+    ----------
+    line_y_list : Sequence[Sequence[np.ndarray]]
+        A list, where each element is a sequence containing [y_profile, tf, tbg]
+        for a single dataset, and tf/tbg are 1D arrays.
+    line_y_err_list : Sequence[Sequence[Optional[np.ndarray]]]
+        A list, where each element is a sequence containing [y_profile_err, tf_err, tbg_err]
+        for a single dataset, and tf_err/tbg_err are 1D arrays representing errors.
+        y_profile_err can be None.
+
+    Returns
+    -------
+    Tuple[List[float], List[float], List[float], List[float]]
+        A tuple containing four lists:
+        - all_tfs: A list of averaged signal levels, one for each dataset.
+        - all_tf_errs: A list of errors for the averaged signal levels, one for each dataset.
+        - all_tbg: A list of averaged background levels, one for each dataset.
+        - all_tbg_errs: A list of errors for the averaged background levels, one for each dataset.
+    """
+
+    all_tfs = []
+    all_tbg = []
+    all_tf_errs = []
+    all_tbg_errs = []
+
+    for line_y, line_y_err in zip(line_y_list, line_y_err_list):
+        tf = line_y[1]
+        tbg = line_y[2]
+        tf_err = line_y_err[1]
+        tbg_err = line_y_err[2]
+
+        all_tfs.append(np.mean(tf))
+        all_tbg.append(np.mean(tbg))
+
+        if tf_err is not None:
+            if np.all(tf_err == 0):
+                all_tf_errs.append(0.0)
+            else:
+                all_tf_errs.append(np.sqrt(np.sum(tf_err**2)) / len(tf_err))
+        else:
+            all_tf_errs.append(np.nan)
+
+        if tbg_err is not None:
+            if np.all(tbg_err == 0):
+                all_tbg_errs.append(0.0)
+            else:
+                all_tbg_errs.append(np.sqrt(np.sum(tbg_err**2)) / len(tbg_err))
+        else:
+            all_tbg_errs.append(np.nan)
+
+    return all_tfs, all_tf_errs, all_tbg, all_tbg_errs
