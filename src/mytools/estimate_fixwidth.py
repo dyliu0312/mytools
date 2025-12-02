@@ -191,7 +191,8 @@ def get_signal_level_fixwidth(
         - A list of flattened data from the center, left, right, and background regions.
         - A list of flattened error data from the CLRB regions.
     """
-    if data_err is None:
+    has_err = data_err is not None
+    if not has_err:
         data_err = np.zeros_like(data)
 
     sy, sx = data.shape
@@ -203,7 +204,7 @@ def get_signal_level_fixwidth(
     yy = np.linspace(*ylim, num=sy)
 
     y_profile_err = None
-    if data_err is not None:
+    if has_err:
         if data_err.shape != data.shape:
             raise ValueError(
                 f"Shape of data_err {data_err.shape} must match shape of data {data.shape}."
@@ -264,7 +265,7 @@ def get_signal_level_fixwidth_multi(
         The half-width (e.g., 1-sigma) of the central region in world coordinates.
     data_errs : Optional[Sequence[np.ndarray]], optional
         A list of 1-sigma error arrays for the data. Must have the same
-        length and shapes as `datas`. Defaults to None.
+        length as `datas`. Defaults to None.
     x_range : Sequence[float], optional
         The x-range for profile averaging and analysis. Defaults to [-0.5, 0.5].
     x_num : int, optional
@@ -386,3 +387,69 @@ def get_averaged_signal_levels(
             all_tbg_errs.append(np.nan)
 
     return all_tfs, all_tf_errs, all_tbg, all_tbg_errs
+
+
+def get_null_test_results(
+    datas: Sequence[np.ndarray],
+    width: float,
+    x_range: Sequence[float] = [-0.5, 0.5],
+    xlim: Sequence[float] = [-3, 3],
+    ylim: Sequence[float] = [-3, 3],
+    shift_unit: int = 2,
+) -> Tuple[float, float, float, float]:
+    """
+    Performs a null test by calculating the mean and standard deviation
+    of the signal (tf) and background (tbg) regions across multiple datasets.
+
+    This function processes each dataset to extract the center (signal) and
+    background regions, combines all pixel values from these regions across
+    all datasets, and then computes the overall mean and standard deviation.
+
+    Parameters
+    ----------
+    datas : Sequence[np.ndarray]
+        A list of 2D data arrays for the null tests.
+    width : float
+        The half-width (e.g., 1-sigma) of the central region in world coordinates.
+    x_range : Sequence[float], optional
+        The x-range of the central region. Defaults to [-0.5, 0.5].
+    xlim : Sequence[float], optional
+        The x-limits of the data array. Defaults to [-3, 3].
+    ylim : Sequence[float], optional
+        The y-limits of the data array. Defaults to [-3, 3].
+    shift_unit : int, optional
+        The shift distance for the outer regions. Defaults to 2.
+
+    Returns
+    -------
+    Tuple[float, float, float, float]
+        A tuple containing:
+        - tf_mean: The mean of all pixel values in the signal region across all datasets.
+        - tf_std: The standard deviation of all pixel values in the signal region.
+        - tbg_mean: The mean of all pixel values in the background region.
+        - tbg_std: The standard deviation of all pixel values in the background region.
+    """
+    all_tf_pixels = []
+    all_tbg_pixels = []
+
+    for data in datas:
+        clrb, _ = get_center_outer_background(
+            data,
+            data,  # placeholder of data_error
+            width,
+            x_range=x_range,
+            xlim=xlim,
+            ylim=ylim,
+            shift_unit=shift_unit,
+        )
+        # clrb[0] is the center (tf) region, clrb[3] is the background (tbg) region
+        all_tf_pixels.extend(clrb[0].flatten())
+        all_tbg_pixels.extend(clrb[3].flatten())
+
+    # Calculate final statistics
+    tf_mean = np.mean(all_tf_pixels)
+    tf_std = np.std(all_tf_pixels)
+    tbg_mean = np.mean(all_tbg_pixels)
+    tbg_std = np.std(all_tbg_pixels)
+
+    return tf_mean, tf_std, tbg_mean, tbg_std  # pyright: ignore[reportReturnType]
