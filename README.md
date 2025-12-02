@@ -12,9 +12,10 @@ The main modules are:
 * ```calculation.py    ```: to calculate some quantities (beamsize, sensitivity...),
 * ```stack.py          ```: to aid the stacking procedure,
 * ```halo.py           ```: to finish halo component fiting and subtraction (**original** code used in paper),
-* ```halo_new.py       ```: optimised version of halo-contriubiton subtraction (**recommanded**),
+* ```halo_new.py       ```: optimised version of halo-contriubiton subtraction (**recommanded**, but it's still numerical, refer to [crafts_stack](https://github.com/dyliu0312/crafts_stack) for analytical verison),
 * ```utils.py          ```: utilities for fiting (get coodinates, mask...),
-* ```estimate.py       ```: to estimate the signal level,
+* ```estimate.py       ```: to estimate the signal level (original used in paper),
+* ```estimate_fixwidth.py ```: to estimate the signal level base on given width,
 * ```bins.py           ```: helper functions for bins.
 
 There are also useful scripts in the [scripts](scripts) folder:
