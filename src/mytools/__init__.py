@@ -1,8 +1,8 @@
 """
-mytools - A collection of python tools used in my HI filament stacking simulation work, arxiv:2411.03988. 
+mytools - A collection of python tools used in my HI filament stacking simulation work, arxiv:2411.03988.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "dyliu <dyliu0312@gmail.com>"
 
 
@@ -12,9 +12,13 @@ from . import (
     constant,
     data,
     estimate,
+    estimate_fixwidth,
     halo,
+    halo_opt,
     plot,
+    plot_custom,
     stack,
+    utils,
 )
 
 __all__ = [
@@ -23,7 +27,11 @@ __all__ = [
     "constant",
     "data",
     "estimate",
+    "estimate_fixwidth",
     "halo",
+    "halo_opt",
     "plot",
+    "plot_custom",
     "stack",
+    "utils",
 ]
