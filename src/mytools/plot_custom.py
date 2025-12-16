@@ -845,6 +845,58 @@ def compare_profiles(
     return axes
 
 
+def shade_width_regions(
+    ax: Axes,
+    width: float = 0.5,
+    color: Sequence[str] = ["pink", "lightblue", "lightblue"],
+    alpha: float = 0.5,
+    **kwargs,
+):
+    """
+    Add shaded vertical regions to a matplotlib axes.
+
+    This function creates three adjacent shaded vertical bands on the plot:
+    1. A central region symmetric around zero.
+    2. Two outer regions positioned further from the center.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The axes object to which the shaded regions will be added.
+    width : float, default=0.5
+        Base width parameter that defines the size of the regions.
+        The central region spans from `-width` to `width`.
+        Each outer region has the same width as the central region
+        and is positioned three widths away from the center.
+    color : Sequence[str], default=["pink", "lightblue", "lightblue"]
+        A sequence of three colors for the shaded regions.
+        The first color is used for the central region.
+        The second and third colors are used for the left and right outer regions respectively.
+    alpha : float, default=0.5
+        Transparency level of the shaded regions (0=transparent, 1=opaque).
+    **kwargs : dict
+        Additional keyword arguments passed to `ax.axvspan`.
+
+    Notes
+    -----
+    The regions are defined as:
+        - Central: from `-width` to `width`
+        - Left outer: from `-width*4` to `-width*3`
+        - Right outer: from `width*3` to `width*4`
+
+    Examples
+    --------
+    >>> import matplotlib.pyplot as plt
+    >>> fig, ax = plt.subplots()
+    >>> shade_width_regions(ax, width=0.3, color=["yellow", "gray", "gray"])
+    >>> ax.set_xlim(-2, 2)
+    >>> plt.show()
+    """
+    ax.axvspan(-width, width, color=color[0], alpha=alpha, **kwargs)
+    ax.axvspan(-width * 4, -width * 3, color=color[1], alpha=alpha, **kwargs)
+    ax.axvspan(width * 3, width * 4, color=color[2], alpha=alpha, **kwargs)
+
+
 def plot_profile_fixwidth_2r(
     x: List[List[Union[NDArray, Sequence[float]]]],
     y: List[List[Union[NDArray, Sequence[float]]]],
@@ -855,27 +907,33 @@ def plot_profile_fixwidth_2r(
     text_pos: Optional[List[List[float]]] = None,
     width: Union[float, List[float]] = 0.5,
     fontsize: Union[float, List[float]] = 12,
-    title: Union[str, List[str], None] = None,
+    title: Union[str, List[str], None] = [
+        "Transverse-section profile",
+        "Lengthwise-section profile",
+    ],
     xlabel: Union[str, List[Union[str, None]], None] = ["Y", "X"],
     ylabel: Union[str, List[Union[str, None]], None] = r"$T\ [\mu$K]",
-    color: Union[str, List[str], None] = None,
-    marker: Union[str, List[str], None] = None,
+    color: Union[str, List[str], None] = ["b", "r", "k"],
+    marker: Union[str, List[str], None] = [".", "o", "o"],
     linestyle: Union[str, List[str]] = "--",
-    label: Union[str, List[str], None] = None,
+    label: Union[str, List[str], None] = [
+        r"$|{\rm X}|< 0.5$",
+        r"$T_{\rm f}$",
+        r"$T_{\rm bg}$",
+    ],
     tick_in: bool = True,
+    add_shade: bool = True,
 ) -> Union[List[Axes], Tuple[Axes]]:
     """
-    plot lines in two row subplots.
+    Plot profiles in a (2-row, n-col) subplots.
 
     Args:
-        x (List[list]): x data points.
-        y (List[list]): y data points.
+        x,y (List[List[NDArray]]): x, y data points.
         cut (int): cut index to separate the data into upper and bottom two parts. Defaults to 1. \
             i.e. The upper and bottom panels of the first subplot is showing x[0, :cut] and x[0, cut:] respectively.
         axes (List[Axes], Tuple[Axes], None): axes object. Defaults to None.
-        y_err (list, optional): y error of the data. Defaults to None.
-        x_err (list, optional): x error of the data. Defaults to None.
-        text_pos (list, optional): text positions. Defaults to None, and the text position will be auto.
+        y_err, x_err (list, optional): errors of the data. Defaults to None.
+        text_pos (list, optional): text positions. Defaults to None, to use default relative positions.
         width (float, list): width of the filament to show on the upper pannel. Defaults to 0.5.
         fontsize (float): fontsize of the text. Defaults to 12.
         title (str, list): titles of the subplots. Defaults to None.
@@ -888,19 +946,20 @@ def plot_profile_fixwidth_2r(
         linestyle (str, list): linestyles of the lines. Defaults to '--'.
         label (str, list): labels of the lines. Defaults to None.
         tick_in (bool): whether to show the ticks inside the subplots. Defaults to True.
+        add_shade (bool):  whether to add shaded width regions to the upper subplots. Defaults to True.
     """
 
     ncol = len(x)
     nline = len(x[0])
     nrow = 2
-    ntext = 2
+    ntext = 3
 
     if axes is None:
         _, axes = make_figure(
             2,
             ncol,
-            figsize=(4 * ncol + 2, 8),
-            sharey="row",
+            figsize=(4 * ncol, 6),
+            sharey="col",
             sharex="row",
             wspace=0,
             hspace=0.4,
@@ -918,7 +977,6 @@ def plot_profile_fixwidth_2r(
     # check text parameters
     if text_pos is not None:
         text_pos = arg_list(text_pos, ntext, ncol)
-    fontsize = arg_list(fontsize, ntext, ncol)
     width = arg_list(width, ncol)
 
     # check xlabels
@@ -972,6 +1030,21 @@ def plot_profile_fixwidth_2r(
             tick_in=tick_in,
         )
         ax_up.axhline(0, linestyle="--", c="gray")
+        # add text that marker the width of filament
+        strw = r"$w_{\rm t} = %.2f$" % width[i]
+        if _text_pos is None:
+            ax_up.text(
+                0.05,
+                0.9,
+                strw,
+                color="r",
+                fontsize=fontsize,
+                transform=ax_up.transAxes,
+            )
+        else:
+            ax_up.text(*_text_pos[2], s=strw, color="r", fontsize=fontsize)
+        if add_shade:
+            shade_width_regions(ax_up, width=width[i])
 
         ax_down = axes[1, i] if ncol > 1 else axes[1]  # pyright: ignore[reportGeneralTypeIssues, reportArgumentType, reportCallIssue]
         plot_line(
@@ -1005,11 +1078,11 @@ def plot_profile_fixwidth_2r(
                 0.9,
                 strf,
                 color="r",
-                fontsize=fontsize[1],
+                fontsize=fontsize,
                 transform=ax_down.transAxes,
             )
         else:
-            ax_down.text(*_text_pos[0], s=strf, color="r", fontsize=fontsize[1])
+            ax_down.text(*_text_pos[0], s=strf, color="r", fontsize=fontsize)
 
         # background
         mb = np.mean(y_down[1])
@@ -1025,11 +1098,11 @@ def plot_profile_fixwidth_2r(
                 0.8,
                 strb,
                 color="k",
-                fontsize=fontsize[2],
+                fontsize=fontsize,
                 transform=ax_down.transAxes,
             )
         else:
-            ax_down.text(*_text_pos[1], s=strb, color="k", fontsize=fontsize[2])
+            ax_down.text(*_text_pos[1], s=strb, color="k", fontsize=fontsize)
 
     return axes
 
@@ -1054,11 +1127,12 @@ def plot_profile_fixwidth_2c(
     marker: Union[str, List[str], None] = [".", "o", "o"],
     linestyle: Union[str, List[str], None] = "--",
     label: Union[str, List[Union[str, None]], None] = [
-        None,
+        r"$|{\rm X}|< 0.5$",
         r"$T_{\rm f}$",
         r"$T_{\rm bg}$",
     ],
     tick_in: bool = True,
+    add_shade: bool = True,
 ) -> List[Axes]:
     """
     plot profiles in two column subplots.
@@ -1084,6 +1158,7 @@ def plot_profile_fixwidth_2c(
         linestyle (str, list): line styles. Defaults to "--".
         label (str, list): line labels. Defaults to [r"$T_{\rm f}$", r"$T_{\rm bg$"].
         tick_in (bool): whether to show ticks inside the axes. Defaults to True.
+        add_shade (bool):  whether to add shaded width regions to the upper subplots. Defaults to True.
     Returns:
         axes (list): axes object.
 
@@ -1124,7 +1199,6 @@ def plot_profile_fixwidth_2c(
     marker = arg_list(marker, nline)
     linestyle = arg_list(linestyle, nline)
     label = arg_list(label, nline)
-    fontsize = arg_list(fontsize, 3)
 
     for i, ax in enumerate(list(axes)):  # type: ignore
         c = color[:cut] if i == 0 else color[cut:]
@@ -1164,11 +1238,11 @@ def plot_profile_fixwidth_2c(
                     0.9,
                     strf,
                     color="r",
-                    fontsize=fontsize[0],
+                    fontsize=fontsize,
                     transform=ax.transAxes,
                 )
             else:
-                ax.text(*text_pos[0], s=strf, color="r", fontsize=fontsize[0])
+                ax.text(*text_pos[0], s=strf, color="r", fontsize=fontsize)
 
             # background
             mb = np.mean(y_right[1])
@@ -1184,11 +1258,11 @@ def plot_profile_fixwidth_2c(
                     0.8,
                     strb,
                     color="k",
-                    fontsize=fontsize[1],
+                    fontsize=fontsize,
                     transform=ax.transAxes,
                 )
             else:
-                ax.text(*text_pos[1], s=strb, color="k", fontsize=fontsize[1])
+                ax.text(*text_pos[1], s=strb, color="k", fontsize=fontsize)
 
         # add text that marker the width of filament
         else:
@@ -1199,7 +1273,7 @@ def plot_profile_fixwidth_2c(
                     0.9,
                     strw,
                     color="r",
-                    fontsize=fontsize[2],
+                    fontsize=fontsize,
                     transform=ax.transAxes,
                 )
             else:
@@ -1207,7 +1281,9 @@ def plot_profile_fixwidth_2c(
                     *text_pos[2],
                     s=strw,
                     color="r",
-                    fontsize=fontsize[2],
+                    fontsize=fontsize,
                 )
-
+            # add shades vertical span to show width regions
+            if add_shade:
+                shade_width_regions(ax, width=width)
     return axes
