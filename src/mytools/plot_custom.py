@@ -1287,3 +1287,65 @@ def plot_profile_fixwidth_2c(
             if add_shade:
                 shade_width_regions(ax, width=width)
     return axes
+
+
+def plot_pair_sep(
+    data,
+    bins=20,
+    ax=None,
+    label=["Transversal", "Radial", "Spatial"],
+    color=["r", "b", "k"],
+    linewidth=1.4,
+    xlabel=r"Separation [$h^{-1}$ Mpc]",
+    show_mean: bool = True,
+    **kwargs,
+):
+    """
+    Plot the separation distribution of selected galaxy pairs.
+
+    Parameters
+    ----------
+    data : Sequence[np.ndarray]
+        A sequence of data arrays representing pair separations. For example,
+        this could be a list of [transversal, radial, spatial] separations.
+    bins : int or sequence, default=20
+        The number of bins for the histogram or a sequence of bin edges.
+    ax : matplotlib.axes.Axes, optional
+        The axes object to plot on. If None, a new one is created by `plot_hist`.
+    label : list of str, default=["Transversal", "Radial", "Spatial"]
+        Labels for each dataset in `data`.
+    color : list of str, default=["r", "b", "k"]
+        Colors for each histogram.
+    linewidth : float, default=1.4
+        The width of the histogram lines.
+    xlabel : str, default=r"Separation [$h^{-1}$ Mpc]"
+        The label for the x-axis.
+    show_mean : bool, default=True
+        If True, a vertical dashed line is drawn at the mean of each dataset.
+    **kwargs
+        Additional keyword arguments passed to `plot_hist`.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The axes object with the plot.
+    """
+
+    ax = plot_hist(
+        data,
+        bins=bins,
+        ax=ax,
+        label=label,
+        color=color,
+        linewidth=linewidth,
+        xlabel=xlabel,
+        **kwargs,
+    )
+
+    if show_mean:
+        for d, c, la in zip(data, color, label):
+            m = d.mean()
+            ax.axvline(m, linestyle="--", c=c, zorder=-100)
+            print("%s mean separation: %.2f Mpc/h" % (la, m))
+
+    return ax
