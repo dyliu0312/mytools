@@ -421,3 +421,22 @@ def get_beam_npix(z=0.1, beamsize=None, pixel_width=20 * u_kpc):
 
     dc = plk.kpc_comoving_per_arcmin(z) * beamsize * FWHM2SIGMA
     return (dc / pixel_width).decompose()
+
+
+def get_omega_HI(tb: u.Quantity, z=0, h: float = C_HUB):
+    """
+    Calculate the HI fration or density parameter，Omega_HI.
+
+    Paramters:
+        tb: the HI brightness temperature
+        z: redshift.
+        h: dimensionless hubble constant.
+    Return:
+        Omega_HI
+    """
+
+    def ez(z):
+        return (plk.Om0 * (1 + z) ** 3 + 1 - plk.Om0) ** 0.5
+
+    omega_HI = 7.6e-3 * tb.to_value(u.mK) / (h / 0.7) * ez(z) / (1 + z) ** 2  # pyright: ignore[reportOperatorIssue, reportAttributeAccessIssue]
+    return omega_HI
