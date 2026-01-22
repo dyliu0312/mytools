@@ -271,7 +271,7 @@ def get_center_outer_background(
     Extract center, outer, and background regions from the data.
 
     The 'center' is defined by the `x_range` and a given `width` in y.
-    The 'outer' regions are shifted versions of the center region along the x-axis.
+    The 'outer' regions are shifted versions of the center region along the x-axis (left and right).
     The 'background' is taken from regions in y far from the center.
 
     Parameters
@@ -279,7 +279,7 @@ def get_center_outer_background(
     data : np.ndarray
         The 2D data array.
     width : float
-        The half-width (e.g., 1-sigma) of the central region in world coordinates.
+        The width of the central region (i.e., 1-sigma value) .
     x_range : list, optional
         The x-range of the central region. Defaults to [-0.5, 0.5].
     xlim : list, optional
@@ -287,8 +287,7 @@ def get_center_outer_background(
     ylim : list, optional
         The y-limits of the data array. Defaults to [-3, 3].
     shift_unit : int, optional
-        The shift distance for the outer regions, in world coordinates.
-        Defaults to 2.
+        The shift distance for the outer regions. Defaults to 2.
 
     Returns
     -------
@@ -370,7 +369,7 @@ def get_signal_level(
     ylim : list, optional
         The y-limits of the data array. Defaults to [-3, 3].
     shift_unit : int, optional
-        The shift distance for the outer regions. Defaults to 2.
+        The shift units to get the outer regions. Defaults to 2.
     show_fit : bool, optional
         If True, plot the y-profile fit. Defaults to True.
     sigma_clip_sigma : Optional[float], optional
