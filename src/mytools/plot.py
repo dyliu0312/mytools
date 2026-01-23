@@ -996,9 +996,9 @@ def plot_line_diff(
         raise ValueError("Failed to create axes.")
 
     # Set default plotting parameters
-    dkw_line1 = {"marker": "o", "linestyle": "", "color": "blue"}
-    dkw_line2 = {"marker": "", "linestyle": "--", "color": "red"}
-    dkw_diff = {"marker": "s", "linestyle": "-", "color": "black"}
+    dkw_line1 = {"marker": ".", "linestyle": "", "color": "royalblue"}
+    dkw_line2 = {"marker": "", "linestyle": "--", "color": "tomato"}
+    dkw_diff = {"marker": ".", "linestyle": "", "color": "black", "alpha": 0.6}
 
     # Update with user provided parameters
     if kw_line1 is not None:
