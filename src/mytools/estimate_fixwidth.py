@@ -396,21 +396,21 @@ def get_null_test_results(
     xlim: Sequence[float] = [-3, 3],
     ylim: Sequence[float] = [-3, 3],
     shift_unit: int = 2,
-) -> Tuple[float, float, float, float]:
+) -> Tuple[List[float], List[float]]:
     """
-    Performs a null test by calculating the mean and standard deviation
-    of the signal (tf) and background (tbg) regions across multiple datasets.
+    Get the overall values of null-test results corresponding to the
+    signal (tf) and background (tbg) regions across multiple realizations.
 
     This function processes each dataset to extract the center (signal) and
     background regions, combines all pixel values from these regions across
-    all datasets, and then computes the overall mean and standard deviation.
+    all datasets.
 
     Parameters
     ----------
     datas : Sequence[np.ndarray]
-        A list of 2D data arrays for the null tests.
+        A list of 2D data arrays of the null tests.
     width : float
-        The half-width (e.g., 1-sigma) of the central region in world coordinates.
+        The width of the central region (i.e., 1-sigma value).
     x_range : Sequence[float], optional
         The x-range of the central region. Defaults to [-0.5, 0.5].
     xlim : Sequence[float], optional
@@ -422,7 +422,7 @@ def get_null_test_results(
 
     Returns
     -------
-    Tuple[float, float, float, float]
+    Tuple[List[float], List[float]]
         A tuple containing:
         - tf_mean: The mean of all pixel values in the signal region across all datasets.
         - tf_std: The standard deviation of all pixel values in the signal region.
@@ -446,10 +446,4 @@ def get_null_test_results(
         all_tf_pixels.extend(clrb[0].flatten())
         all_tbg_pixels.extend(clrb[3].flatten())
 
-    # Calculate final statistics
-    tf_mean = np.mean(all_tf_pixels)
-    tf_std = np.std(all_tf_pixels)
-    tbg_mean = np.mean(all_tbg_pixels)
-    tbg_std = np.std(all_tbg_pixels)
-
-    return tf_mean, tf_std, tbg_mean, tbg_std  # pyright: ignore[reportReturnType]
+    return all_tf_pixels, all_tbg_pixels
